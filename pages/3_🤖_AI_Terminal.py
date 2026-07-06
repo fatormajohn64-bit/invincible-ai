@@ -1,20 +1,19 @@
 """
 3_🤖_AI_Terminal.py
 ====================
-Upgraded AI Terminal with Payload Validation.
+Updated AI Terminal with correct API key reference and current model configuration.
 """
 
 import streamlit as st
 import requests
-import json
 
 # ---------------------------------------------------------------------------
 # GLOBAL CONFIG
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="AI Terminal", page_icon="🤖", layout="centered")
 
-# Retrieve Secret
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", None)
+# Retrieve Secret key from 1000023794.jpg
+GROQ_API_KEY = st.secrets.get("NEW_SERVICE_API_KEY", None)
 
 # Styling (Unified Theme)
 INK, SURFACE, SURFACE_2, LINE, TEXT = "#0A0E14", "#12161F", "#191E2A", "#242938", "#E7EAF0"
@@ -32,7 +31,7 @@ st.markdown(f"""
 st.title("🤖 Invincible AI Command Terminal")
 
 if not GROQ_API_KEY:
-    st.error("API Key missing. Add 'GROQ_API_KEY' to your Streamlit secrets.")
+    st.error("API Key missing. Ensure 'NEW_SERVICE_API_KEY' is set in your Streamlit secrets.")
 else:
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": "⚡ System Ready."}]
@@ -47,9 +46,9 @@ else:
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
             
-            # --- Robust Payload Construction ---
+            # --- Payload Construction with Current Model ---
             payload = {
-                "model": "llama3-8b-8192",
+                "model": "llama-3.3-70b-versatile",
                 "messages": [
                     {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
                 ]
@@ -69,9 +68,9 @@ else:
                     response_placeholder.markdown(ai_response)
                 else:
                     # Detailed Error Reporting
-                    error_msg = response.json().get("error", {}).get("message", "Unknown Error")
+                    error_data = response.json()
+                    error_msg = error_data.get("error", {}).get("message", "Unknown Error")
                     response_placeholder.error(f"Error {response.status_code}: {error_msg}")
-                    st.warning("Check your GROQ_API_KEY in cloud secrets or ensure the model name is correct.")
 
             except Exception as e:
                 response_placeholder.error(f"Connection failed: {str(e)}")
