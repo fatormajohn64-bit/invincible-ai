@@ -203,12 +203,24 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# COMPETITION CATALOG
+# COMPETITION CATALOG (All Available International & National Tiers)
 # ---------------------------------------------------------------------------
 ALL_COMPS = {
-    "WC": "FIFA World Cup", "CL": "UEFA Champions League", "CLI": "Copa Libertadores",
-    "PL": "Premier League", "PD": "La Liga", "SA": "Serie A", "BL1": "Bundesliga",
-    "FL1": "Ligue 1", "DED": "Eredivisie", "BSA": "Campeonato Brasileiro Série A"
+    # International Tournaments
+    "WC": "🏆 FIFA World Cup",
+    "CL": "🇪🇺 UEFA Champions League",
+    "EC": "🇪🇺 UEFA European Championship",
+    "CLI": "🌎 Copa Libertadores",
+    # National Domestic Leagues
+    "PL": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League (England)",
+    "ELC": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 EFL Championship (England)",
+    "PD": "🇪🇸 La Liga (Spain)",
+    "SA": "🇮🇹 Serie A (Italy)",
+    "BL1": "🇩🇪 Bundesliga (Germany)",
+    "FL1": "🇫🇷 Ligue 1 (France)",
+    "DED": "🇳🇱 Eredivisie (Netherlands)",
+    "PPL": "🇵🇹 Primeira Liga (Portugal)",
+    "BSA": "🇧🇷 Campeonato Brasileiro Série A"
 }
 
 STATUS_LIVE = {"LIVE", "IN_PLAY", "PAUSED"}
@@ -316,7 +328,7 @@ def fetch_matches(date_from: str, date_to: str):
         return [], str(e)
 
 # ---------------------------------------------------------------------------
-# UI COMPONENTS (Fixed from truncation)
+# UI COMPONENTS
 # ---------------------------------------------------------------------------
 def go_to_match(match_id):
     st.session_state["selected_match_id"] = match_id
@@ -342,14 +354,17 @@ def render_match_card(match):
     status = match.get("status")
     match_id = match.get("id")
 
+    # Resolve Clean Competition Display Name
+    comp_code = match.get("competition", {}).get("code")
+    comp_display = ALL_COMPS.get(comp_code, f"🏆 {match.get('competition', {}).get('name', 'Football')}")
+
     with st.container(border=True):
-        st.markdown(f'<div class="comp-eyebrow">{render_status_badge(match)} - {ALL_COMPS.get(match.get("competition", {}).get("code"), "Football")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="comp-eyebrow">{render_status_badge(match)} - {comp_display}</div>', unsafe_allow_html=True)
         
         cols = st.columns([3, 2, 3])
         with cols[0]:
             st.markdown(f'<div class="team-name">🏠 {home_short}</div>', unsafe_allow_html=True)
         
-        # FIXED: Completed the truncated section here
         with cols[1]:
             if status in STATUS_SCHEDULED:
                 st.markdown('<div class="score-num" style="text-align:center">V</div>', unsafe_allow_html=True)
@@ -379,7 +394,7 @@ def render_match_card(match):
                 ''', unsafe_allow_html=True
             )
         else:
-            st.markdown("<br>", unsafe_allow_html=True) # Spacer for finished games
+            st.markdown("<br>", unsafe_allow_html=True)
 
         st.button("Match Center", key=f"btn_{match_id}", on_click=go_to_match, args=(match_id,))
 
@@ -410,20 +425,53 @@ def main():
         st.error("Missing FOOTBALL_DATA_API_KEY in Streamlit Secrets.")
         return
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    matches, err = fetch_matches(today, today)
+    # -----------------------------------------------------------------------
+    # NEW SIDEBAR CONTROLS (League Filter & Time Travel)
+    # -----------------------------------------------------------------------
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("⚙️ Match Feed Filters")
+    
+    # 1. Date Picker Control
+    selected_date = st.sidebar.date_input("Select Match Date", datetime.now(timezone.utc).date())
+    date_str = selected_date.strftime("%Y-%m-%d")
+    
+    # 2. League Selection Dropdown
+    all_league_names = list(ALL_COMPS.values())
+    selected_leagues = st.sidebar.multiselect(
+        "Filter Competitions",
+        options=all_league_names,
+        default=all_league_names,
+        help="Add or remove leagues to filter the live dashboard view."
+    )
+
+    # Convert selected visible names back to API short codes
+    selected_codes = {code for code, name in ALL_COMPS.items() if name in selected_leagues}
+
+    # Fetch live match list data from chosen date
+    matches, err = fetch_matches(date_str, date_str)
     
     if err:
         st.error(f"Error fetching data: {err}")
         return
         
     if not matches:
-        st.info("No major matches found for today.")
+        st.info(f"No match events recorded on {date_str}.")
         return
 
-    live = [m for m in matches if m["status"] in STATUS_LIVE]
-    upcoming = [m for m in matches if m["status"] in STATUS_SCHEDULED]
-    finished = [m for m in matches if m["status"] in STATUS_FINISHED]
+    # Local filtration pass based on sidebar settings
+    filtered_matches = [
+        m for m in matches 
+        if m.get("competition", {}).get("code") in selected_codes
+    ]
+
+    if not filtered_matches:
+        st.info("No matches match your active sidebar league filters.")
+        return
+
+    # Grouping matching data models
+    live = [m for m in filtered_matches if m["status"] in STATUS_LIVE]
+    upcoming = [m for m in filtered_matches if m["status"] in STATUS_SCHEDULED]
+    finished = [m for m in filtered_matches if m["status"] in STATUS_FINISHED]
 
     if live:
         st.subheader("🔴 Live Now")
@@ -439,4 +487,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
