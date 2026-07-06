@@ -1,5 +1,3 @@
-fastapi
-uvicorn
+streamlit
 groq
-jinja2
 python-dotenv
