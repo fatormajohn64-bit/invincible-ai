@@ -9,6 +9,16 @@ SETUP:
         FOOTBALL_DATA_API_KEY = "your-key-here"
 
 Free-tier docs: https://www.football-data.org/documentation/quickstart
+
+NOTE ON MATCH DETAIL DATA:
+    The free tier of Football-Data.org does NOT include player-level data
+    (lineups, substitutions, cards, player ratings) — that requires a paid
+    "deep data" add-on. Real fields available on the free tier (venue,
+    attendance, referee, half/full-time score, matchday, etc.) are fetched
+    live from the API. Lineups and player ratings shown in the match detail
+    view are clearly labeled SIMULATED — deterministically generated (same
+    technique as the existing win-probability engine) so the app still
+    looks and feels complete, without pretending to have real player data.
 """
 
 import hashlib
@@ -43,6 +53,7 @@ SIGNAL     = "#28E0C4"   # live / active accent (signal-cyan)
 GOLD       = "#F2B84B"   # draw / neutral probability
 CORAL      = "#FF6B5E"   # away-leaning probability / live dot
 EMERALD    = "#3ED598"   # finished / win state
+VIOLET     = "#9B8CFF"   # simulated-data accent
 
 st.markdown(
     f"""
@@ -142,6 +153,11 @@ st.markdown(
         color: {EMERALD};
     }}
 
+    .badge-sim {{
+        background: rgba(155, 140, 255, 0.14);
+        color: {VIOLET};
+    }}
+
     .countdown-text {{
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.72rem;
@@ -188,6 +204,87 @@ st.markdown(
     div[data-testid="stButton"] button:hover {{
         border-color: {SIGNAL};
         color: {SIGNAL};
+    }}
+
+    .detail-stat-label {{
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: {MUTED};
+        margin-bottom: 2px;
+    }}
+    .detail-stat-value {{
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        font-size: 1rem;
+        color: {TEXT};
+    }}
+
+    .sim-banner {{
+        background: rgba(155, 140, 255, 0.08);
+        border: 1px dashed rgba(155, 140, 255, 0.4);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 0.8rem;
+        color: {VIOLET};
+        margin-bottom: 14px;
+    }}
+
+    .formation-tag {{
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        color: {MUTED};
+        margin-bottom: 10px;
+    }}
+
+    .player-row {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 10px;
+        border-radius: 8px;
+        background: {SURFACE_2};
+        margin-bottom: 6px;
+    }}
+    .player-left {{
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }}
+    .player-num {{
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        color: {MUTED};
+        width: 20px;
+        text-align: center;
+    }}
+    .player-pos {{
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.05em;
+        color: {MUTED};
+        background: rgba(124,135,156,0.14);
+        padding: 2px 6px;
+        border-radius: 5px;
+    }}
+    .player-name {{
+        font-size: 0.85rem;
+        color: {TEXT};
+        font-weight: 500;
+    }}
+    .rating-chip {{
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.78rem;
+        padding: 2px 9px;
+        border-radius: 999px;
+        color: {INK};
+    }}
+    .team-avg-rating {{
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
     }}
     </style>
     """,
@@ -260,6 +357,89 @@ def get_win_probabilities(home_name: str, away_name: str):
 
 
 # ---------------------------------------------------------------------------
+# SIMULATED LINEUP & PLAYER RATING ENGINE
+# ---------------------------------------------------------------------------
+# The free API tier has no real squad/lineup/player-rating data. This engine
+# deterministically derives a plausible formation + shirt numbers + ratings
+# from the team name and match id, so refreshing the page always shows the
+# same "simulated" lineup for a given match rather than random noise.
+FORMATIONS = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1", "3-4-3", "5-3-2"]
+
+
+def get_rating_color(rating: float) -> str:
+    if rating >= 8.3:
+        return EMERALD
+    if rating >= 7.0:
+        return SIGNAL
+    if rating >= 6.0:
+        return GOLD
+    return CORAL
+
+
+def generate_simulated_lineup(team_name: str, match_id, side: str):
+    seed = f"{match_id}::{side}::{team_name.strip().lower()}".encode()
+    digest = hashlib.sha256(seed).hexdigest()
+
+    formation = FORMATIONS[int(digest[0:4], 16) % len(FORMATIONS)]
+    line_counts = [int(x) for x in formation.split("-")]
+
+    slots = [("GK", 1)]
+    line_labels = ["DF", "MF", "FW"]
+    for i, count in enumerate(line_counts):
+        slots.append((line_labels[i], count))
+
+    used_numbers = set()
+    players = []
+    slot_idx = 0
+    for pos, count in slots:
+        for _ in range(count):
+            chunk = digest[(slot_idx * 6) % 58: (slot_idx * 6) % 58 + 6]
+            val = int(chunk, 16) if chunk else slot_idx * 7 + 1
+
+            number = (val % 27) + 1
+            while number in used_numbers:
+                number = (number % 27) + 1
+            used_numbers.add(number)
+
+            rating = round(5.6 + (val % 401) / 100, 1)  # ~5.6 - 9.6
+            players.append({"number": number, "position": pos, "rating": rating})
+            slot_idx += 1
+
+    avg_rating = round(sum(p["rating"] for p in players) / len(players), 2)
+    return formation, players, avg_rating
+
+
+def render_lineup_column(team_short: str, team_name: str, match_id, side: str):
+    formation, players, avg_rating = generate_simulated_lineup(team_name, match_id, side)
+
+    top = st.columns([2, 1])
+    with top[0]:
+        st.markdown(f'<div class="team-name">{team_short}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="formation-tag">Formation {formation} · Simulated</div>', unsafe_allow_html=True)
+    with top[1]:
+        st.markdown(
+            f'<div style="text-align:right" class="team-avg-rating" style="color:{get_rating_color(avg_rating)}">{avg_rating}</div>',
+            unsafe_allow_html=True,
+        )
+
+    for p in players:
+        color = get_rating_color(p["rating"])
+        st.markdown(
+            f"""
+            <div class="player-row">
+                <div class="player-left">
+                    <span class="player-num">#{p['number']}</span>
+                    <span class="player-pos">{p['position']}</span>
+                    <span class="player-name">{team_short} Player {p['number']}</span>
+                </div>
+                <span class="rating-chip" style="background:{color}">{p['rating']}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+# ---------------------------------------------------------------------------
 # COUNTDOWN FORMATTER
 # ---------------------------------------------------------------------------
 def format_countdown(utc_date_str: str) -> str:
@@ -329,6 +509,38 @@ def fetch_matches(competition_codes: tuple, date_from: str, date_to: str):
     return payload.get("matches", []), None
 
 
+@st.cache_data(ttl=30, show_spinner=False)
+def fetch_match_detail(match_id):
+    """Fetch a single match's real data from the free-tier API.
+    Note: lineups/player ratings are NOT part of the free-tier response."""
+    if not API_KEY:
+        return None, "missing_key"
+
+    headers = {"X-Auth-Token": API_KEY}
+    try:
+        response = requests.get(
+            f"{API_BASE}/matches/{match_id}", headers=headers, timeout=10
+        )
+    except requests.exceptions.ConnectionError:
+        return None, "connection_error"
+    except requests.exceptions.Timeout:
+        return None, "timeout"
+    except requests.exceptions.RequestException as exc:
+        return None, f"request_error: {exc}"
+
+    if response.status_code == 429:
+        return None, "rate_limited"
+    if response.status_code == 403:
+        return None, "forbidden"
+    if response.status_code != 200:
+        return None, f"http_{response.status_code}"
+
+    try:
+        return response.json(), None
+    except ValueError:
+        return None, "bad_json"
+
+
 # ---------------------------------------------------------------------------
 # CARD UI COMPONENT: STATUS BADGES
 # ---------------------------------------------------------------------------
@@ -355,6 +567,14 @@ def render_status_badge(match):
 
 
 # ---------------------------------------------------------------------------
+# NAVIGATION HELPER
+# ---------------------------------------------------------------------------
+def go_to_match(match_id):
+    st.session_state["selected_match_id"] = match_id
+    st.session_state["selected_match_status"] = None
+
+
+# ---------------------------------------------------------------------------
 # CARD UI COMPONENT: LIVE & UPCOMING FIXTURES
 # ---------------------------------------------------------------------------
 def render_live_or_upcoming_card(match):
@@ -367,6 +587,7 @@ def render_live_or_upcoming_card(match):
     home_score = score.get("home")
     away_score = score.get("away")
     kickoff_time = match.get("utcDate", "")
+    match_id = match.get("id")
 
     try:
         dt = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
@@ -393,189 +614,4 @@ def render_live_or_upcoming_card(match):
             if status in STATUS_LIVE:
                 st.markdown(
                     f'<div class="score-num" style="text-align:center">{home_score if home_score is not None else 0} – {away_score if away_score is not None else 0}</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    f'<div class="score-num" style="text-align:center;font-size:0.85rem;color:#7C879C;line-height:1.2;">{time_txt}</div>',
-                    unsafe_allow_html=True,
-                )
-        with cols[2]:
-            st.markdown(f'<div class="team-name" style="text-align:right">{away_short} ✈️</div>', unsafe_allow_html=True)
-
-        if status in STATUS_SCHEDULED:
-            probs = get_win_probabilities(home, away)
-            st.markdown(
-                f"""
-                <div class="prob-wrap">
-                    <div class="prob-seg-home" style="width:{probs['home']}%"></div>
-                    <div class="prob-seg-draw" style="width:{probs['draw']}%"></div>
-                    <div class="prob-seg-away" style="width:{probs['away']}%"></div>
-                </div>
-                <div class="prob-labels">
-                    <span>{home_short} {probs['home']}%</span>
-                    <span>Draw {probs['draw']}%</span>
-                    <span>{away_short} {probs['away']}%</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-
-# ---------------------------------------------------------------------------
-# CARD UI COMPONENT: COMPLETED HISTORICAL MATCHES
-# ---------------------------------------------------------------------------
-def render_finished_card(match):
-    home_short = match.get("homeTeam", {}).get("shortName") or match.get("homeTeam", {}).get("name", "TBD")
-    away_short = match.get("awayTeam", {}).get("shortName") or match.get("awayTeam", {}).get("name", "TBD")
-    score = match.get("score", {}).get("fullTime", {})
-    home_score = score.get("home", "-")
-    away_score = score.get("away", "-")
-    winner = match.get("score", {}).get("winner")
-    kickoff_time = match.get("utcDate", "")
-
-    try:
-        dt = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
-        date_txt = dt.strftime("%b %d")
-    except (ValueError, AttributeError):
-        date_txt = ""
-
-    with st.container(border=True):
-        comp_name = render_status_badge(match)
-        st.markdown(f'<div class="comp-eyebrow">{comp_name} <span style="color:#7C879C">· {date_txt}</span></div>', unsafe_allow_html=True)
-
-        cols = st.columns([4, 2, 4])
-        with cols[0]:
-            home_prefix = "🏆 " if winner == "HOME_TEAM" else ""
-            st.markdown(f'<div class="team-name">{home_prefix}{home_short}</div>', unsafe_allow_html=True)
-        with cols[1]:
-            st.markdown(
-                f'<div class="score-num" style="text-align:center">{home_score} – {away_score}</div>',
-                unsafe_allow_html=True,
-            )
-        with cols[2]:
-            away_suffix = " 🏆" if winner == "AWAY_TEAM" else ""
-            st.markdown(f'<div class="team-name" style="text-align:right">{away_short}{away_suffix}</div>', unsafe_allow_html=True)
-
-
-# ---------------------------------------------------------------------------
-# SIDEBAR CONTROL INTERFACE
-# ---------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("### ⚽ Filters")
-
-    scope = st.radio(
-        "Scope",
-        options=["All Competitions", "🌐 International", "🏆 Domestic Leagues"],
-        index=0,
-    )
-
-    if scope == "🌐 International":
-        pool = INTERNATIONAL_COMPS
-    elif scope == "🏆 Domestic Leagues":
-        pool = DOMESTIC_COMPS
-    else:
-        pool = ALL_COMPS
-
-    league_choice = st.selectbox(
-        "Competition",
-        options=["All"] + list(pool.keys()),
-        format_func=lambda code: "All in scope" if code == "All" else f"{pool[code]} ({code})",
-    )
-
-    if league_choice == "All":
-        selected_codes = tuple(pool.keys())
-    else:
-        selected_codes = (league_choice,)
-
-    st.divider()
-    
-    st.markdown("### 📅 Timeframe")
-    date_mode = st.selectbox(
-        "Date Range Selection",
-        options=["7-Day Window (Recommended)", "Today Only", "Next 3 Days", "Past 3 Days"],
-        index=0
-    )
-    
-    now_utc = datetime.now(timezone.utc)
-    if date_mode == "Today Only":
-        date_from = now_utc.strftime("%Y-%m-%d")
-        date_to = now_utc.strftime("%Y-%m-%d")
-    elif date_mode == "Next 3 Days":
-        date_from = now_utc.strftime("%Y-%m-%d")
-        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
-    elif date_mode == "Past 3 Days":
-        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
-        date_to = now_utc.strftime("%Y-%m-%d")
-    else: # Default 7-Day Matrix Window
-        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
-        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
-
-    st.divider()
-    st.caption("Data caches for 60s. Tap refresh below to force update.")
-
-# ---------------------------------------------------------------------------
-# CORE VIEW RENDER ENGINE
-# ---------------------------------------------------------------------------
-st.title("⚽ Live Scores")
-st.caption(f"Powered by Football-Data.org · Range: {date_from} to {date_to}")
-
-if not API_KEY:
-    st.error("No API key configured. Check your Streamlit Secrets layout settings.")
-    st.stop()
-
-# Execution fetch cycle
-matches, error = fetch_matches(selected_codes, date_from, date_to)
-
-if error == "rate_limited":
-    st.warning("⏳ Rate limit hit for Football-Data.org free tier. Please wait a moment.")
-    st.stop()
-elif error == "forbidden":
-    st.error("🔒 Access denied—this selection might require a paid tier key.")
-    st.stop()
-elif error in ("connection_error", "timeout"):
-    st.error("📡 Data stream connection timeout. Check network latency.")
-    st.stop()
-elif error is not None:
-    st.error(f"⚠️ App encounter state anomaly: {error}")
-    st.stop()
-
-# Sorting partitions
-live_and_upcoming = [m for m in matches if m.get("status") in STATUS_LIVE | STATUS_SCHEDULED]
-previous_results = [m for m in matches if m.get("status") in STATUS_FINISHED]
-
-def _sort_key(match):
-    status = match.get("status")
-    is_live = 0 if status in STATUS_LIVE else 1
-    return (is_live, match.get("utcDate", ""))
-
-live_and_upcoming.sort(key=_sort_key)
-previous_results.sort(key=lambda m: m.get("utcDate", ""), reverse=True)
-
-# Tabs management allocation Layout
-tab_live, tab_previous = st.tabs(["🔴 Live & Upcoming", "🏁 Previous Results"])
-
-with tab_live:
-    if not live_and_upcoming:
-        st.markdown(
-            f'<div class="empty-state">No live or upcoming matches found from {date_from} to {date_to}.</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        for m in live_and_upcoming:
-            render_live_or_upcoming_card(m)
-
-with tab_previous:
-    if not previous_results:
-        st.markdown(
-            f'<div class="empty-state">No completed matches found from {date_from} to {date_to}.</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        for m in previous_results:
-            render_finished_card(m)
-
-# Interactivity controller block
-st.divider()
-if st.button("🔄 Refresh Match Center", type="primary", use_container_width=True):
-    st.rerun()
+                    u
