@@ -6,7 +6,7 @@ Football-Data.org (v4). Built for a multipage Streamlit app.
 """
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import requests
 import streamlit as st
@@ -431,17 +431,34 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Match Feed Filters")
     
-    # 1. Date Picker Control
-    selected_date = st.sidebar.date_input("Select Match Date", datetime.now(timezone.utc).date())
+    # NEW: 7-Day Window Toggle Control
+    use_7_day = st.sidebar.toggle(
+        "📅 Show 7-Day Window", 
+        value=False, 
+        help="View past (finished), current (live), and upcoming scheduled matches within a 7-day span."
+    )
+
+    # 1. Date Picker Control (Grays out when 7-Day Window is active)
+    selected_date = st.sidebar.date_input("Select Match Date", datetime.now(timezone.utc).date(), disabled=use_7_day)
     
-    # FIX: Ensure we only process a single date, even if Streamlit returns a tuple
-    if isinstance(selected_date, tuple):
-        if len(selected_date) > 0:
-            selected_date = selected_date[0]
-        else:
-            selected_date = datetime.now(timezone.utc).date()
-            
-    date_str = selected_date.strftime("%Y-%m-%d")
+    # Logic to switch between Single Day and 7-Day Range
+    if use_7_day:
+        today = datetime.now(timezone.utc).date()
+        # API fetches from 3 days ago up to 3 days in the future (7 days total)
+        date_from_str = (today - timedelta(days=3)).strftime("%Y-%m-%d")
+        date_to_str = (today + timedelta(days=3)).strftime("%Y-%m-%d")
+        display_date_text = f"{date_from_str} to {date_to_str}"
+    else:
+        # FIX: Ensure we only process a single date, even if Streamlit returns a tuple
+        if isinstance(selected_date, tuple):
+            if len(selected_date) > 0:
+                selected_date = selected_date[0]
+            else:
+                selected_date = datetime.now(timezone.utc).date()
+                
+        date_from_str = selected_date.strftime("%Y-%m-%d")
+        date_to_str = selected_date.strftime("%Y-%m-%d")
+        display_date_text = date_from_str
     
     # 2. League Selection Dropdown
     all_league_names = list(ALL_COMPS.values())
@@ -455,15 +472,15 @@ def main():
     # Convert selected visible names back to API short codes
     selected_codes = {code for code, name in ALL_COMPS.items() if name in selected_leagues}
 
-    # Fetch live match list data from chosen date
-    matches, err = fetch_matches(date_str, date_str)
+    # Fetch live match list data from chosen date(s)
+    matches, err = fetch_matches(date_from_str, date_to_str)
     
     if err:
         st.error(f"Error fetching data: {err}")
         return
         
     if not matches:
-        st.info(f"No match events recorded on {date_str}.")
+        st.info(f"No match events recorded for {display_date_text}.")
         return
 
     # Local filtration pass based on sidebar settings
@@ -495,3 +512,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
