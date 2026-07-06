@@ -31,7 +31,7 @@ API_BASE = "https://api.football-data.org/v4"
 API_KEY = st.secrets.get("FOOTBALL_DATA_API_KEY", "")
 
 # ---------------------------------------------------------------------------
-# DESIGN TOKENS
+# DESIGN TOKENS (Custom Dark Theme Styles)
 # ---------------------------------------------------------------------------
 INK        = "#0A0E14"   # page background
 SURFACE    = "#12161F"   # card background
@@ -195,7 +195,7 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# COMPETITION CATALOG (free tier)
+# COMPETITION CATALOG (free tier codes)
 # ---------------------------------------------------------------------------
 INTERNATIONAL_COMPS = {
     "WC":  "FIFA World Cup",
@@ -223,7 +223,7 @@ STATUS_FINISHED = {"FINISHED", "AWARDED"}
 
 
 # ---------------------------------------------------------------------------
-# WIN PROBABILITY ENGINE (deterministic, no odds feed required)
+# WIN PROBABILITY ENGINE (deterministic analytics simulation)
 # ---------------------------------------------------------------------------
 def get_win_probabilities(home_name: str, away_name: str):
     key = f"{home_name.strip().lower()}::{away_name.strip().lower()}".encode()
@@ -291,7 +291,7 @@ def format_countdown(utc_date_str: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# API LAYER
+# API DATA CONDUIT
 # ---------------------------------------------------------------------------
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_matches(competition_codes: tuple, date_from: str, date_to: str):
@@ -330,125 +330,12 @@ def fetch_matches(competition_codes: tuple, date_from: str, date_to: str):
 
 
 # ---------------------------------------------------------------------------
-# SIDEBAR — FILTERING ENGINE
-# ---------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("### ⚽ Filters")
-
-    scope = st.radio(
-        "Scope",
-        options=["All Competitions", "🌐 International", "🏆 Domestic Leagues"],
-        index=0,
-    )
-
-    if scope == "🌐 International":
-        pool = INTERNATIONAL_COMPS
-    elif scope == "🏆 Domestic Leagues":
-        pool = DOMESTIC_COMPS
-    else:
-        pool = ALL_COMPS
-
-    league_choice = st.selectbox(
-        "Competition",
-        options=["All"] + list(pool.keys()),
-        format_func=lambda code: "All in scope" if code == "All" else f"{pool[code]} ({code})",
-    )
-
-    if league_choice == "All":
-        selected_codes = tuple(pool.keys())
-    else:
-        selected_codes = (league_choice,)
-
-    st.divider()
-    
-    # DYNAMIC TIME RANGE CONFIGURATION
-    st.markdown("### 📅 Timeframe")
-    date_mode = st.selectbox(
-        "Date Range Selection",
-        options=["7-Day Window (Recommended)", "Today Only", "Next 3 Days", "Past 3 Days"],
-        index=0
-    )
-    
-    now_utc = datetime.now(timezone.utc)
-    if date_mode == "Today Only":
-        date_from = now_utc.strftime("%Y-%m-%d")
-        date_to = now_utc.strftime("%Y-%m-%d")
-    elif date_mode == "Next 3 Days":
-        date_from = now_utc.strftime("%Y-%m-%d")
-        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
-    elif date_mode == "Past 3 Days":
-        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
-        date_to = now_utc.strftime("%Y-%m-%d")
-    else:  # 7-Day Window
-        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
-        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
-
-    st.divider()
-    st.caption("Data caches for 60s. Tap refresh below to force update.")
-
-# ---------------------------------------------------------------------------
-# HEADER
-# ---------------------------------------------------------------------------
-st.title("⚽ Live Scores")
-st.caption(f"Powered by Football-Data.org · Range: {date_from} to {date_to}")
-
-if not API_KEY:
-    st.error(
-        "No API key found. Add `FOOTBALL_DATA_API_KEY` to your Streamlit "
-        "secrets to load live match data."
-    )
-    st.stop()
-
-# ---------------------------------------------------------------------------
-# FETCH DATA
-# ---------------------------------------------------------------------------
-matches, error = fetch_matches(selected_codes, date_from, date_to)
-
-if error == "rate_limited":
-    st.warning(
-        "⏳ We've hit the free-tier rate limit for Football-Data.org. "
-        "Please wait a minute before refreshing again."
-    )
-    st.stop()
-elif error == "forbidden":
-    st.error(
-        "🔒 Access denied by Football-Data.org — this competition or "
-        "endpoint may not be included in the free tier for your key."
-    )
-    st.stop()
-elif error in ("connection_error", "timeout"):
-    st.error(
-        "📡 Couldn't reach Football-Data.org — check your network connection "
-        "and try refreshing."
-    )
-    st.stop()
-elif error == "missing_key":
-    st.stop()
-elif error is not None:
-    st.error(f"⚠️ Unexpected error loading match data: {error}")
-    st.stop()
-
-# ---------------------------------------------------------------------------
-# SPLIT MATCHES
-# ---------------------------------------------------------------------------
-live_and_upcoming = [m for m in matches if m.get("status") in STATUS_LIVE | STATUS_SCHEDULED]
-previous_results = [m for m in matches if m.get("status") in STATUS_FINISHED]
-
-def _sort_key(match):
-    status = match.get("status")
-    is_live = 0 if status in STATUS_LIVE else 1
-    return (is_live, match.get("utcDate", ""))
-
-live_and_upcoming.sort(key=_sort_key)
-previous_results.sort(key=lambda m: m.get("utcDate", ""), reverse=True)
-
-
-# ---------------------------------------------------------------------------
-# MATCH CARD RENDERERS
+# CARD UI COMPONENT: STATUS BADGES
 # ---------------------------------------------------------------------------
 def render_status_badge(match):
     status = match.get("status")
-    comp_name = ALL_COMPS.get(match.get("competition", {}).get("code", ""), match.get("competition", {}).get("name", ""))
+    comp_code = match.get("competition", {}).get("code", "")
+    comp_name = ALL_COMPS.get(comp_code, match.get("competition", {}).get("name", ""))
 
     if status in STATUS_LIVE:
         minute = match.get("minute")
@@ -467,6 +354,9 @@ def render_status_badge(match):
     return comp_name
 
 
+# ---------------------------------------------------------------------------
+# CARD UI COMPONENT: LIVE & UPCOMING FIXTURES
+# ---------------------------------------------------------------------------
 def render_live_or_upcoming_card(match):
     home = match.get("homeTeam", {}).get("name", "TBD")
     away = match.get("awayTeam", {}).get("name", "TBD")
@@ -507,7 +397,7 @@ def render_live_or_upcoming_card(match):
                 )
             else:
                 st.markdown(
-                    f'<div class="score-num" style="text-align:center;font-size:0.85rem;color:{MUTED};line-height:1.2;">{time_txt}</div>',
+                    f'<div class="score-num" style="text-align:center;font-size:0.85rem;color:#7C879C;line-height:1.2;">{time_txt}</div>',
                     unsafe_allow_html=True,
                 )
         with cols[2]:
@@ -532,6 +422,9 @@ def render_live_or_upcoming_card(match):
             )
 
 
+# ---------------------------------------------------------------------------
+# CARD UI COMPONENT: COMPLETED HISTORICAL MATCHES
+# ---------------------------------------------------------------------------
 def render_finished_card(match):
     home_short = match.get("homeTeam", {}).get("shortName") or match.get("homeTeam", {}).get("name", "TBD")
     away_short = match.get("awayTeam", {}).get("shortName") or match.get("awayTeam", {}).get("name", "TBD")
@@ -549,7 +442,7 @@ def render_finished_card(match):
 
     with st.container(border=True):
         comp_name = render_status_badge(match)
-        st.markdown(f'<div class="comp-eyebrow">{comp_name} <span style="color:{MUTED}">· {date_txt}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="comp-eyebrow">{comp_name} <span style="color:#7C879C">· {date_txt}</span></div>', unsafe_allow_html=True)
 
         cols = st.columns([4, 2, 4])
         with cols[0]:
@@ -566,15 +459,106 @@ def render_finished_card(match):
 
 
 # ---------------------------------------------------------------------------
-# TABS & REFRESH ACTION BUTTONS
+# SIDEBAR CONTROL INTERFACE
 # ---------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("### ⚽ Filters")
+
+    scope = st.radio(
+        "Scope",
+        options=["All Competitions", "🌐 International", "🏆 Domestic Leagues"],
+        index=0,
+    )
+
+    if scope == "🌐 International":
+        pool = INTERNATIONAL_COMPS
+    elif scope == "🏆 Domestic Leagues":
+        pool = DOMESTIC_COMPS
+    else:
+        pool = ALL_COMPS
+
+    league_choice = st.selectbox(
+        "Competition",
+        options=["All"] + list(pool.keys()),
+        format_func=lambda code: "All in scope" if code == "All" else f"{pool[code]} ({code})",
+    )
+
+    if league_choice == "All":
+        selected_codes = tuple(pool.keys())
+    else:
+        selected_codes = (league_choice,)
+
+    st.divider()
+    
+    st.markdown("### 📅 Timeframe")
+    date_mode = st.selectbox(
+        "Date Range Selection",
+        options=["7-Day Window (Recommended)", "Today Only", "Next 3 Days", "Past 3 Days"],
+        index=0
+    )
+    
+    now_utc = datetime.now(timezone.utc)
+    if date_mode == "Today Only":
+        date_from = now_utc.strftime("%Y-%m-%d")
+        date_to = now_utc.strftime("%Y-%m-%d")
+    elif date_mode == "Next 3 Days":
+        date_from = now_utc.strftime("%Y-%m-%d")
+        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
+    elif date_mode == "Past 3 Days":
+        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
+        date_to = now_utc.strftime("%Y-%m-%d")
+    else: # Default 7-Day Matrix Window
+        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
+        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
+
+    st.divider()
+    st.caption("Data caches for 60s. Tap refresh below to force update.")
+
+# ---------------------------------------------------------------------------
+# CORE VIEW RENDER ENGINE
+# ---------------------------------------------------------------------------
+st.title("⚽ Live Scores")
+st.caption(f"Powered by Football-Data.org · Range: {date_from} to {date_to}")
+
+if not API_KEY:
+    st.error("No API key configured. Check your Streamlit Secrets layout settings.")
+    st.stop()
+
+# Execution fetch cycle
+matches, error = fetch_matches(selected_codes, date_from, date_to)
+
+if error == "rate_limited":
+    st.warning("⏳ Rate limit hit for Football-Data.org free tier. Please wait a moment.")
+    st.stop()
+elif error == "forbidden":
+    st.error("🔒 Access denied—this selection might require a paid tier key.")
+    st.stop()
+elif error in ("connection_error", "timeout"):
+    st.error("📡 Data stream connection timeout. Check network latency.")
+    st.stop()
+elif error is not None:
+    st.error(f"⚠️ App encounter state anomaly: {error}")
+    st.stop()
+
+# Sorting partitions
+live_and_upcoming = [m for m in matches if m.get("status") in STATUS_LIVE | STATUS_SCHEDULED]
+previous_results = [m for m in matches if m.get("status") in STATUS_FINISHED]
+
+def _sort_key(match):
+    status = match.get("status")
+    is_live = 0 if status in STATUS_LIVE else 1
+    return (is_live, match.get("utcDate", ""))
+
+live_and_upcoming.sort(key=_sort_key)
+previous_results.sort(key=lambda m: m.get("utcDate", ""), reverse=True)
+
+# Tabs management allocation Layout
 tab_live, tab_previous = st.tabs(["🔴 Live & Upcoming", "🏁 Previous Results"])
 
 with tab_live:
     if not live_and_upcoming:
         st.markdown(
-            f'<div class="empty-state">No live or upcoming matches found from {date_from} to {date_to}.<br>'
-            'Try widening your timeframe filter in the sidebar.</div>',
+            f'<div class="empty-state">No live or upcoming matches found from {date_from} to {date_to}.</div>',
             unsafe_allow_html=True,
         )
     else:
@@ -589,4 +573,9 @@ with tab_previous:
         )
     else:
         for m in previous_results:
-            render_finished_car
+            render_finished_card(m)
+
+# Interactivity controller block
+st.divider()
+if st.button("🔄 Refresh Match Center", type="primary", use_container_width=True):
+    st.rerun()
