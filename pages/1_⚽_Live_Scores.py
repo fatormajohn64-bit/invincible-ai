@@ -6,7 +6,7 @@ Football-Data.org (v4). Built for a multipage Streamlit app.
 """
 
 import hashlib
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 import requests
 import streamlit as st
@@ -433,6 +433,14 @@ def main():
     
     # 1. Date Picker Control
     selected_date = st.sidebar.date_input("Select Match Date", datetime.now(timezone.utc).date())
+    
+    # FIX: Ensure we only process a single date, even if Streamlit returns a tuple
+    if isinstance(selected_date, tuple):
+        if len(selected_date) > 0:
+            selected_date = selected_date[0]
+        else:
+            selected_date = datetime.now(timezone.utc).date()
+            
     date_str = selected_date.strftime("%Y-%m-%d")
     
     # 2. League Selection Dropdown
