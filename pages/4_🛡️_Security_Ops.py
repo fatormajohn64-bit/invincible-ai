@@ -1,45 +1,55 @@
 """
 4_🛡️_Security_Ops.py
 ====================
-Invincible Security Research & Defensive Operations.
+Educational Security & Hardening Module
 """
 
 import streamlit as st
 import hashlib
 
-# Page Config
-st.set_page_config(page_title="Security Ops", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="Security Research", page_icon="🛡️")
 
-st.title("🛡️ Security Operations Center")
-st.subheader("Ethical Hacking & Defensive Research Module")
+st.title("🛡️ Ethical Security Research Lab")
 
-# Sidebar for Security Navigation
-menu = ["Dashboard", "Password Strength", "Network Scanner", "Security News"]
-choice = st.sidebar.selectbox("Operations", menu)
+# Integrated Security News Feed
+st.subheader("Live Security Intelligence (RSS)")
+# You can use the same news logic here, but with 'cybersecurity' as the query
+if st.button("Fetch Latest Security Briefings"):
+    st.write("Fetching feeds from The Hacker News/Security Weekly...")
+    # [Insert your news_api logic here, but use 'cybersecurity' as the query string]
 
-if choice == "Dashboard":
-    st.write("### Active Threats & Security News")
-    st.info("Monitor live security threats and learn defensive coding practices.")
+st.markdown("---")
 
-elif choice == "Password Strength":
-    st.write("### Password Strength Auditor")
-    pwd = st.text_input("Enter password to test:", type="password")
+# Module Sections
+tab1, tab2, tab3 = st.tabs(["Password Security (Entropy)", "Hash Analysis", "Security Checklist"])
+
+with tab1:
+    st.header("Password Entropy Lab")
+    st.write("Learn why complexity matters. This tool calculates password strength.")
+    pwd = st.text_input("Enter a test password:", type="password")
     if pwd:
-        # Basic logical entropy check
-        if len(pwd) > 12 and any(c.isupper() for c in pwd) and any(c.isdigit() for c in pwd):
-            st.success("Strong: Complex password structure detected.")
-        else:
-            st.error("Weak: Improve password by adding symbols, numbers, and length.")
+        # Simple logical check
+        score = len(pwd) * 2
+        if any(c.isupper() for c in pwd): score += 10
+        if any(c.isdigit() for c in pwd): score += 10
+        
+        st.progress(min(score/100, 1.0))
+        if score > 50: st.success("Good entropy.")
+        else: st.warning("Vulnerable to brute-force.")
 
-elif choice == "Network Scanner":
-    st.write("### Internal Network Discovery")
-    st.warning("Note: This feature is for educational use on your local network only.")
-    ip = st.text_input("Enter target IP (e.g., 192.168.1.1)")
-    if st.button("Scan Ports"):
-        st.write(f"Simulating scan on {ip}...")
-        st.write("Status: Protected / Filtering Enabled")
+with tab2:
+    st.header("Hash Verification (Data Integrity)")
+    st.write("Understand how files are verified. Paste text to see its SHA-256 hash.")
+    text = st.text_area("Input data:")
+    if text:
+        hashed = hashlib.sha256(text.encode()).hexdigest()
+        st.code(hashed)
 
-elif choice == "Security News":
-    st.write("### Ethical Hacking Updates")
-    st.markdown("Use this tab to fetch daily updates from security news feeds.")
-  
+with tab3:
+    st.header("Device Hardening Checklist")
+    st.markdown("""
+    *   **[ ] Network Audit:** Are you using a VPN on public Wi-Fi?
+    *   **[ ] Permissions:** Have you audited app permissions on your phone?
+    *   **[ ] Encryption:** Is your drive encrypted (BitLocker/FileVault)?
+    """)
+    
