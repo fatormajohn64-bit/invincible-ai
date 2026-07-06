@@ -360,13 +360,37 @@ with st.sidebar:
         selected_codes = (league_choice,)
 
     st.divider()
-    st.caption("Data refreshes automatically every 60s, or tap refresh below.")
+    
+    # DYNAMIC TIME RANGE CONFIGURATION
+    st.markdown("### 📅 Timeframe")
+    date_mode = st.selectbox(
+        "Date Range Selection",
+        options=["7-Day Window (Recommended)", "Today Only", "Next 3 Days", "Past 3 Days"],
+        index=0
+    )
+    
+    now_utc = datetime.now(timezone.utc)
+    if date_mode == "Today Only":
+        date_from = now_utc.strftime("%Y-%m-%d")
+        date_to = now_utc.strftime("%Y-%m-%d")
+    elif date_mode == "Next 3 Days":
+        date_from = now_utc.strftime("%Y-%m-%d")
+        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
+    elif date_mode == "Past 3 Days":
+        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
+        date_to = now_utc.strftime("%Y-%m-%d")
+    else:  # 7-Day Window
+        date_from = (now_utc - timedelta(days=3)).strftime("%Y-%m-%d")
+        date_to = (now_utc + timedelta(days=3)).strftime("%Y-%m-%d")
+
+    st.divider()
+    st.caption("Data caches for 60s. Tap refresh below to force update.")
 
 # ---------------------------------------------------------------------------
 # HEADER
 # ---------------------------------------------------------------------------
 st.title("⚽ Live Scores")
-st.caption("Powered by Football-Data.org · Free tier")
+st.caption(f"Powered by Football-Data.org · Range: {date_from} to {date_to}")
 
 if not API_KEY:
     st.error(
@@ -376,10 +400,9 @@ if not API_KEY:
     st.stop()
 
 # ---------------------------------------------------------------------------
-# FETCH DATA (today's matches, in scope)
+# FETCH DATA
 # ---------------------------------------------------------------------------
-today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-matches, error = fetch_matches(selected_codes, today_str, today_str)
+matches, error = fetch_matches(selected_codes, date_from, date_to)
 
 if error == "rate_limited":
     st.warning(
@@ -453,6 +476,13 @@ def render_live_or_upcoming_card(match):
     score = match.get("score", {}).get("fullTime", {})
     home_score = score.get("home")
     away_score = score.get("away")
+    kickoff_time = match.get("utcDate", "")
+
+    try:
+        dt = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
+        time_txt = dt.strftime("%b %d · %H:%M UTC")
+    except (ValueError, AttributeError):
+        time_txt = "--:--"
 
     with st.container(border=True):
         top = st.columns([3, 1])
@@ -462,7 +492,7 @@ def render_live_or_upcoming_card(match):
         with top[1]:
             if status in STATUS_SCHEDULED:
                 st.markdown(
-                    f'<div style="text-align:right" class="countdown-text">{format_countdown(match.get("utcDate",""))}</div>',
+                    f'<div style="text-align:right" class="countdown-text">{format_countdown(kickoff_time)}</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -476,14 +506,8 @@ def render_live_or_upcoming_card(match):
                     unsafe_allow_html=True,
                 )
             else:
-                kickoff_time = match.get("utcDate", "")
-                try:
-                    dt = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
-                    time_txt = dt.strftime("%H:%M UTC")
-                except (ValueError, AttributeError):
-                    time_txt = "--:--"
                 st.markdown(
-                    f'<div class="score-num" style="text-align:center;font-size:1rem;color:{MUTED}">{time_txt}</div>',
+                    f'<div class="score-num" style="text-align:center;font-size:0.85rem;color:{MUTED};line-height:1.2;">{time_txt}</div>',
                     unsafe_allow_html=True,
                 )
         with cols[2]:
@@ -514,12 +538,18 @@ def render_finished_card(match):
     score = match.get("score", {}).get("fullTime", {})
     home_score = score.get("home", "-")
     away_score = score.get("away", "-")
-
     winner = match.get("score", {}).get("winner")
+    kickoff_time = match.get("utcDate", "")
+
+    try:
+        dt = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
+        date_txt = dt.strftime("%b %d")
+    except (ValueError, AttributeError):
+        date_txt = ""
 
     with st.container(border=True):
         comp_name = render_status_badge(match)
-        st.markdown(f'<div class="comp-eyebrow">{comp_name}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="comp-eyebrow">{comp_name} <span style="color:{MUTED}">· {date_txt}</span></div>', unsafe_allow_html=True)
 
         cols = st.columns([4, 2, 4])
         with cols[0]:
@@ -543,8 +573,8 @@ tab_live, tab_previous = st.tabs(["🔴 Live & Upcoming", "🏁 Previous Results
 with tab_live:
     if not live_and_upcoming:
         st.markdown(
-            '<div class="empty-state">No live or upcoming matches in this scope right now.<br>'
-            'Try a different competition filter, or check back later.</div>',
+            f'<div class="empty-state">No live or upcoming matches found from {date_from} to {date_to}.<br>'
+            'Try widening your timeframe filter in the sidebar.</div>',
             unsafe_allow_html=True,
         )
     else:
@@ -554,15 +584,9 @@ with tab_live:
 with tab_previous:
     if not previous_results:
         st.markdown(
-            '<div class="empty-state">No completed matches found in this scope for today.</div>',
+            f'<div class="empty-state">No completed matches found from {date_from} to {date_to}.</div>',
             unsafe_allow_html=True,
         )
     else:
         for m in previous_results:
-            render_finished_card(m)
-
-# Global manual action controller 
-st.divider()
-if st.button("🔄 Refresh Match Center", type="primary", use_container_width=True):
-    st.rerun()
-    
+            render_finished_car
