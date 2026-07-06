@@ -66,19 +66,31 @@ st.markdown(
         background: {SURFACE};
         border: 1px solid {LINE} !important;
         border-radius: 14px;
-        transition: border-color 0.15s ease;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
         border-color: #323952 !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }}
 
     .comp-eyebrow {{
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.68rem;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
         color: {MUTED};
         margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }}
+
+    .match-time-tag {{
+        background: rgba(124, 135, 156, 0.1);
+        padding: 2px 8px;
+        border-radius: 4px;
+        color: {TEXT};
+        font-size: 0.65rem;
     }}
 
     .score-num {{
@@ -126,12 +138,17 @@ st.markdown(
 
     .badge-scheduled {{ background: rgba(124, 135, 156, 0.14); color: {MUTED}; }}
     .badge-finished {{ background: rgba(62, 213, 152, 0.14); color: {EMERALD}; }}
-    .badge-sim {{ background: rgba(155, 140, 255, 0.14); color: {VIOLET}; }}
-
-    .countdown-text {{
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.72rem;
-        color: {MUTED};
+    
+    .hype-score {{
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #FF8C00;
+        background: rgba(255, 140, 0, 0.1);
+        padding: 2px 8px;
+        border-radius: 6px;
+        margin-top: 4px;
+        display: inline-block;
     }}
 
     .prob-wrap {{
@@ -143,9 +160,9 @@ st.markdown(
         background: {SURFACE_2};
         margin-top: 12px;
     }}
-    .prob-seg-home  {{ background: {SIGNAL}; height: 100%; }}
-    .prob-seg-draw  {{ background: {GOLD};   height: 100%; }}
-    .prob-seg-away  {{ background: {CORAL};  height: 100%; }}
+    .prob-seg-home  {{ background: {SIGNAL}; height: 100%; transition: width 0.3s; }}
+    .prob-seg-draw  {{ background: {GOLD};   height: 100%; transition: width 0.3s; }}
+    .prob-seg-away  {{ background: {CORAL};  height: 100%; transition: width 0.3s; }}
 
     .prob-labels {{
         display: flex;
@@ -203,24 +220,22 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# COMPETITION CATALOG (All Available International & National Tiers)
+# COMPETITION CATALOG
 # ---------------------------------------------------------------------------
 ALL_COMPS = {
-    # International Tournaments
     "WC": "🏆 FIFA World Cup",
     "CL": "🇪🇺 UEFA Champions League",
     "EC": "🇪🇺 UEFA European Championship",
     "CLI": "🌎 Copa Libertadores",
-    # National Domestic Leagues
-    "PL": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League (England)",
-    "ELC": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 EFL Championship (England)",
-    "PD": "🇪🇸 La Liga (Spain)",
-    "SA": "🇮🇹 Serie A (Italy)",
-    "BL1": "🇩🇪 Bundesliga (Germany)",
-    "FL1": "🇫🇷 Ligue 1 (France)",
-    "DED": "🇳🇱 Eredivisie (Netherlands)",
-    "PPL": "🇵🇹 Primeira Liga (Portugal)",
-    "BSA": "🇧🇷 Campeonato Brasileiro Série A"
+    "PL": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League",
+    "ELC": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 EFL Championship",
+    "PD": "🇪🇸 La Liga",
+    "SA": "🇮🇹 Serie A",
+    "BL1": "🇩🇪 Bundesliga",
+    "FL1": "🇫🇷 Ligue 1",
+    "DED": "🇳🇱 Eredivisie",
+    "PPL": "🇵🇹 Primeira Liga",
+    "BSA": "🇧🇷 Brasileirão"
 }
 
 STATUS_LIVE = {"LIVE", "IN_PLAY", "PAUSED"}
@@ -228,8 +243,32 @@ STATUS_SCHEDULED = {"TIMED", "SCHEDULED"}
 STATUS_FINISHED = {"FINISHED", "AWARDED"}
 
 # ---------------------------------------------------------------------------
-# WIN PROBABILITY ENGINE
+# LOGIC ENGINES (Time, Probabilities, Hype, Lineups)
 # ---------------------------------------------------------------------------
+def format_match_time(utc_date_str, status):
+    """Calculates countdowns or absolute times from the API's UTC string."""
+    if not utc_date_str: return ""
+    try:
+        match_time = datetime.strptime(utc_date_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        time_str = match_time.strftime("%b %d • %H:%M UTC")
+        
+        if status in STATUS_SCHEDULED:
+            diff = match_time - now
+            if diff.total_seconds() > 0:
+                d, s = diff.days, diff.seconds
+                h = s // 3600
+                m = (s % 3600) // 60
+                countdown = f"{d}d {h}h {m}m" if d > 0 else f"{h}h {m}m"
+                return f"⏳ Starts in {countdown} | {time_str}"
+            return f"⏳ Starting Soon | {time_str}"
+        elif status in STATUS_FINISHED:
+            return f"🏁 Ended {time_str}"
+        else:
+            return f"🔴 Kickoff {time_str}"
+    except Exception:
+        return utc_date_str
+
 def get_win_probabilities(home_name: str, away_name: str):
     key = f"{home_name.strip().lower()}::{away_name.strip().lower()}".encode()
     digest = hashlib.sha256(key).hexdigest()
@@ -256,9 +295,17 @@ def get_win_probabilities(home_name: str, away_name: str):
 
     return {"home": round(home_share * 100), "draw": round(draw_share * 100), "away": 100 - round(home_share * 100) - round(draw_share * 100)}
 
-# ---------------------------------------------------------------------------
-# LINEUP ENGINE (Simulated for free tier)
-# ---------------------------------------------------------------------------
+def calculate_hype_score(probs, comp_code):
+    """Generates an algorithmic 'hype' score based on match tightness and competition."""
+    diff = abs(probs["home"] - probs["away"])
+    base_hype = max(40, 95 - diff)  # Tight games = high base hype
+    
+    # Competition multipliers/boosts
+    boosts = {"WC": 15, "CL": 12, "PL": 8, "PD": 8, "SA": 7, "EC": 12}
+    total_hype = min(99, base_hype + boosts.get(comp_code, 0))
+    return int(total_hype)
+
+# --- LINEUP SIMULATION ENGINE ---
 FORMATIONS = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1", "3-4-3", "5-3-2"]
 
 def get_rating_color(rating: float) -> str:
@@ -353,32 +400,40 @@ def render_match_card(match):
     
     status = match.get("status")
     match_id = match.get("id")
+    utc_date = match.get("utcDate", "")
 
-    # Resolve Clean Competition Display Name
     comp_code = match.get("competition", {}).get("code")
     comp_display = ALL_COMPS.get(comp_code, f"🏆 {match.get('competition', {}).get('name', 'Football')}")
+    
+    # Custom Features: Time formatter & Probabilities/Hype
+    formatted_time = format_match_time(utc_date, status)
+    probs = get_win_probabilities(home, away)
+    hype = calculate_hype_score(probs, comp_code)
 
     with st.container(border=True):
-        st.markdown(f'<div class="comp-eyebrow">{render_status_badge(match)} - {comp_display}</div>', unsafe_allow_html=True)
+        st.markdown(f'''
+            <div class="comp-eyebrow">
+                <div>{render_status_badge(match)} &nbsp;|&nbsp; {comp_display}</div>
+                <div class="match-time-tag">{formatted_time}</div>
+            </div>
+        ''', unsafe_allow_html=True)
         
         cols = st.columns([3, 2, 3])
         with cols[0]:
             st.markdown(f'<div class="team-name">🏠 {home_short}</div>', unsafe_allow_html=True)
+            if status in STATUS_SCHEDULED:
+                st.markdown(f'<div class="hype-score">🔥 {hype} Hype</div>', unsafe_allow_html=True)
         
         with cols[1]:
             if status in STATUS_SCHEDULED:
                 st.markdown('<div class="score-num" style="text-align:center">V</div>', unsafe_allow_html=True)
             else:
-                st.markdown(
-                    f'<div class="score-num" style="text-align:center">{home_score} – {away_score}</div>',
-                    unsafe_allow_html=True,
-                )
+                st.markdown(f'<div class="score-num" style="text-align:center">{home_score} – {away_score}</div>', unsafe_allow_html=True)
                 
         with cols[2]:
             st.markdown(f'<div class="team-name" style="text-align:right">{away_short} ✈️</div>', unsafe_allow_html=True)
 
         if status not in STATUS_FINISHED:
-            probs = get_win_probabilities(home, away)
             st.markdown(
                 f'''
                 <div class="prob-wrap">
@@ -425,31 +480,24 @@ def main():
         st.error("Missing FOOTBALL_DATA_API_KEY in Streamlit Secrets.")
         return
 
-    # -----------------------------------------------------------------------
-    # NEW SIDEBAR CONTROLS (League Filter & Time Travel)
-    # -----------------------------------------------------------------------
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Match Feed Filters")
     
-    # NEW: 7-Day Window Toggle Control
     use_7_day = st.sidebar.toggle(
         "📅 Show 7-Day Window", 
         value=False, 
         help="View past (finished), current (live), and upcoming scheduled matches within a 7-day span."
     )
 
-    # 1. Date Picker Control (Grays out when 7-Day Window is active)
     selected_date = st.sidebar.date_input("Select Match Date", datetime.now(timezone.utc).date(), disabled=use_7_day)
     
-    # Logic to switch between Single Day and 7-Day Range
     if use_7_day:
         today = datetime.now(timezone.utc).date()
-        # API fetches from 3 days ago up to 3 days in the future (7 days total)
         date_from_str = (today - timedelta(days=3)).strftime("%Y-%m-%d")
         date_to_str = (today + timedelta(days=3)).strftime("%Y-%m-%d")
         display_date_text = f"{date_from_str} to {date_to_str}"
     else:
-        # FIX: Ensure we only process a single date, even if Streamlit returns a tuple
+        # Tuple safety check (Prevents Streamlit tuple AttributeError on quick clicks)
         if isinstance(selected_date, tuple):
             if len(selected_date) > 0:
                 selected_date = selected_date[0]
@@ -460,7 +508,6 @@ def main():
         date_to_str = selected_date.strftime("%Y-%m-%d")
         display_date_text = date_from_str
     
-    # 2. League Selection Dropdown
     all_league_names = list(ALL_COMPS.values())
     selected_leagues = st.sidebar.multiselect(
         "Filter Competitions",
@@ -469,10 +516,8 @@ def main():
         help="Add or remove leagues to filter the live dashboard view."
     )
 
-    # Convert selected visible names back to API short codes
     selected_codes = {code for code, name in ALL_COMPS.items() if name in selected_leagues}
 
-    # Fetch live match list data from chosen date(s)
     matches, err = fetch_matches(date_from_str, date_to_str)
     
     if err:
@@ -483,7 +528,6 @@ def main():
         st.info(f"No match events recorded for {display_date_text}.")
         return
 
-    # Local filtration pass based on sidebar settings
     filtered_matches = [
         m for m in matches 
         if m.get("competition", {}).get("code") in selected_codes
@@ -493,23 +537,5 @@ def main():
         st.info("No matches match your active sidebar league filters.")
         return
 
-    # Grouping matching data models
     live = [m for m in filtered_matches if m["status"] in STATUS_LIVE]
-    upcoming = [m for m in filtered_matches if m["status"] in STATUS_SCHEDULED]
-    finished = [m for m in filtered_matches if m["status"] in STATUS_FINISHED]
-
-    if live:
-        st.subheader("🔴 Live Now")
-        for m in live: render_match_card(m)
-        
-    if upcoming:
-        st.subheader("⏱ Upcoming")
-        for m in upcoming: render_match_card(m)
-        
-    if finished:
-        st.subheader("✓ Finished")
-        for m in finished: render_match_card(m)
-
-if __name__ == "__main__":
-    main()
-    
+    up
