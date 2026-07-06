@@ -32,8 +32,11 @@ NEWS_API_KEY = st.secrets.get("NEWS_API_KEY", None)  # <-- ADD YOUR NEWS API KEY
 SPORTS_API_KEY = st.secrets.get("SPORTS_API_KEY", None)  # <-- ADD YOUR SPORTS API KEY HERE
 
 MODEL_MAP = {
-    "Lite (Fast)": "llama3-8b-8192",
-    "Deep (Smart)": "llama3-70b-8192",
+    MODEL_MAP = {
+    "Lite (Fast)": "llama-3.1-8b-instant",
+    "Deep (Smart)": "llama-3.3-70b-versatile",
+}
+
 }
 
 # ---------------------------------------------------------------------------
