@@ -33,9 +33,6 @@ API_KEY = st.secrets.get("FOOTBALL_DATA_API_KEY", "")
 # ---------------------------------------------------------------------------
 # DESIGN TOKENS
 # ---------------------------------------------------------------------------
-# Palette: near-black pitch-at-night background, a single cool signal accent
-# (signal-cyan) reserved for "live" states, amber reserved only for the
-# probability bar, emerald reserved only for finished/won states.
 INK        = "#0A0E14"   # page background
 SURFACE    = "#12161F"   # card background
 SURFACE_2  = "#191E2A"   # inset / hover surface
@@ -50,7 +47,7 @@ EMERALD    = "#3ED598"   # finished / win state
 st.markdown(
     f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght=500;600;700&family=Inter:wght=400;500;600&family=JetBrains+Mono:wght=500&display=swap');
 
     html, body, [class*="css"] {{
         font-family: 'Inter', sans-serif;
@@ -229,13 +226,6 @@ STATUS_FINISHED = {"FINISHED", "AWARDED"}
 # WIN PROBABILITY ENGINE (deterministic, no odds feed required)
 # ---------------------------------------------------------------------------
 def get_win_probabilities(home_name: str, away_name: str):
-    """
-    Deterministic, hash-weighted win/draw/away split. Same fixture always
-    produces the same split (stable across reruns), while different fixtures
-    produce visually distinct, realistic-looking splits. A small structural
-    home-advantage bump is applied, and the draw share is clamped to a
-    football-realistic band.
-    """
     key = f"{home_name.strip().lower()}::{away_name.strip().lower()}".encode()
     digest = hashlib.sha256(key).hexdigest()
 
@@ -248,13 +238,11 @@ def get_win_probabilities(home_name: str, away_name: str):
     draw_share = raw_draw / total
     away_share = raw_away / total
 
-    # Structural home advantage: nudge weight from away -> home.
     HOME_ADVANTAGE = 0.07
     home_share += HOME_ADVANTAGE
     away_share -= HOME_ADVANTAGE * 0.6
     draw_share -= HOME_ADVANTAGE * 0.4
 
-    # Clamp draw to a realistic band (18%-32%) and redistribute the remainder.
     draw_share = max(0.18, min(0.32, draw_share))
     remaining = 1.0 - draw_share
     hw_aw_total = home_share + away_share
@@ -266,7 +254,7 @@ def get_win_probabilities(home_name: str, away_name: str):
 
     home_pct = round(home_share * 100)
     draw_pct = round(draw_share * 100)
-    away_pct = 100 - home_pct - draw_pct  # absorb rounding drift
+    away_pct = 100 - home_pct - draw_pct
 
     return {"home": home_pct, "draw": draw_pct, "away": away_pct}
 
@@ -275,11 +263,6 @@ def get_win_probabilities(home_name: str, away_name: str):
 # COUNTDOWN FORMATTER
 # ---------------------------------------------------------------------------
 def format_countdown(utc_date_str: str) -> str:
-    """
-    Converts an ISO-8601 UTC timestamp from the API into a human-readable,
-    timezone-safe countdown string. All comparisons are done in UTC so the
-    result is correct regardless of the viewer's device timezone.
-    """
     try:
         match_time = datetime.fromisoformat(utc_date_str.replace("Z", "+00:00"))
     except (ValueError, AttributeError):
@@ -312,11 +295,6 @@ def format_countdown(utc_date_str: str) -> str:
 # ---------------------------------------------------------------------------
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_matches(competition_codes: tuple, date_from: str, date_to: str):
-    """
-    Fetches matches from Football-Data.org for the given competitions and
-    date range. Returns (matches, error_message). error_message is None on
-    success.
-    """
     if not API_KEY:
         return [], "missing_key"
 
@@ -433,7 +411,6 @@ elif error is not None:
 live_and_upcoming = [m for m in matches if m.get("status") in STATUS_LIVE | STATUS_SCHEDULED]
 previous_results = [m for m in matches if m.get("status") in STATUS_FINISHED]
 
-# Live matches first, then soonest-starting upcoming matches.
 def _sort_key(match):
     status = match.get("status")
     is_live = 0 if status in STATUS_LIVE else 1
@@ -512,7 +489,6 @@ def render_live_or_upcoming_card(match):
         with cols[2]:
             st.markdown(f'<div class="team-name" style="text-align:right">{away_short} ✈️</div>', unsafe_allow_html=True)
 
-        # Win probability engine — shown for scheduled/timed fixtures.
         if status in STATUS_SCHEDULED:
             probs = get_win_probabilities(home, away)
             st.markdown(
@@ -539,7 +515,7 @@ def render_finished_card(match):
     home_score = score.get("home", "-")
     away_score = score.get("away", "-")
 
-    winner = match.get("score", {}).get("winner")  # HOME_TEAM / AWAY_TEAM / DRAW
+    winner = match.get("score", {}).get("winner")
 
     with st.container(border=True):
         comp_name = render_status_badge(match)
@@ -560,7 +536,7 @@ def render_finished_card(match):
 
 
 # ---------------------------------------------------------------------------
-# TABS
+# TABS & REFRESH ACTION BUTTONS
 # ---------------------------------------------------------------------------
 tab_live, tab_previous = st.tabs(["🔴 Live & Upcoming", "🏁 Previous Results"])
 
@@ -578,4 +554,15 @@ with tab_live:
 with tab_previous:
     if not previous_results:
         st.markdown(
-            '<div class="empty-st
+            '<div class="empty-state">No completed matches found in this scope for today.</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        for m in previous_results:
+            render_finished_card(m)
+
+# Global manual action controller 
+st.divider()
+if st.button("🔄 Refresh Match Center", type="primary", use_container_width=True):
+    st.rerun()
+    
