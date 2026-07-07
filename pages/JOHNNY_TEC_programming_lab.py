@@ -127,7 +127,7 @@ st.markdown(
         box-shadow: 0 0 15px rgba(0, 240, 255, 0.2) !important;
     }}
     
-    /* Custom button aesthetics */
+    /* Custom primary execute button aesthetics */
     div.stButton > button:first-child {{
         background: linear-gradient(90deg, #7C3AED 0%, #C084FC 100%) !important;
         color: white !important;
@@ -176,12 +176,12 @@ with t_col2:
 with t_col3:
     st.markdown(f'<div class="telemetry-card"><span style="color:{MUTED}; font-size:0.75rem;">REASONING DEPTH</span><br><span style="color:{MATRIX}; font-size:1.05rem; font-weight:bold;">GPT-OSS 120B ENGINE</span></div>', unsafe_allow_html=True)
 with t_col4:
-    st.markdown(f'<div class="telemetry-card"><span style="color:{MUTED}; font-size:0.75rem;">COMPILATION SPEED</span><br><span style="color:{HOT_PINK}; font-size:1.05rem; font-weight:bold;">~660 TOKENS / SEC</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="telemetry-card"><span style="color:{MUTED}; font-size:0.75rem;">COMPILATION SPEED</span><br><span style="color:{HOT_PINK}; font-size:1.05rem; font-weight:bold;">~662 TOKENS / SEC</span></div>', unsafe_allow_html=True)
 
 st.write("")
 
 # ---------------------------------------------------------------------------
-# CONTROL ROOM SIDE PANEL (OPERATION OPTIONS & IMAGE CAPTURE)
+# CONTROL ROOM SIDE PANEL
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🛠️ Operation Directives")
@@ -233,12 +233,13 @@ user_prompt = st.text_area(
     placeholder="Example: Act as a master full-stack engineer. Build a beautiful complete web app with a gorgeous interface, and supply a detailed guide explaining the structure, files, and deployment layout..."
 )
 
-# Parse content from text scripts uploaded
+# Parse and statefully manifest content from text scripts uploaded
 file_content = ""
 if uploaded_code_file:
     try:
         file_content = uploaded_code_file.getvalue().decode("utf-8")
-        st.success(f"📂 Extracted script stream: `{uploaded_code_file.name}` ({len(file_content)} characters ready)")
+        # Visual cue verifying documentation stream is successfully locked into server memory
+        st.success(f"📂 Extracted script stream: `{uploaded_code_file.name}` ({len(file_content)} characters ready). Now trigger the main engine run below!")
     except Exception as e:
         st.error(f"Error reading file structure block: {e}")
 
@@ -279,8 +280,8 @@ if st.button("⚡ EXECUTE SYSTEM COMPILER RUN", use_container_width=True):
         
         # Route processing depending on visual payload status
         if base64_visual_payload:
-            # UPGRADED 2026 ROUTE: Harness Groq's high-speed Qwen 3.6 Multimodal Vision engine
-            model_target = "qwen/qwen3.[span_1](start_span)6-27b"[span_1](end_span)
+            # Fixed quote syntax for Qwen Multimodal engine
+            model_target = "qwen/qwen3.6-27b"
             messages = [
                 {"role": "system", "content": system_instructions},
                 {
@@ -297,7 +298,7 @@ if st.button("⚡ EXECUTE SYSTEM COMPILER RUN", use_container_width=True):
                 }
             ]
         else:
-            # UPGRADED 2026 ROUTE: Harness Groq's flagship ultra-reasoning model for pure text processing
+            # Fixed quote syntax for pure text processing via GPT-OSS matrix
             model_target = "openai/gpt-oss-120b"
             messages = [
                 {"role": "system", "content": system_instructions},
@@ -332,3 +333,4 @@ if st.button("⚡ EXECUTE SYSTEM COMPILER RUN", use_container_width=True):
             
         except Exception as err:
             st.error(f"Execution matrix fault encountered: {err}")
+    
