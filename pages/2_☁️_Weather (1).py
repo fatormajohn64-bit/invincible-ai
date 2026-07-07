@@ -2,14 +2,12 @@
 2_☁️_Weather.py
 ====================
 Premium, glowing dark-themed weather telemetry control room powered by WeatherAPI.com.
-
-SETUP:
-    Add to .streamlit/secrets.toml (or Streamlit Cloud secrets):
-        WEATHER_API_KEY = "your-key-here"
+Upgraded with global temperature tracking extremes and automated weather news streams.
 """
 
 import requests
 import streamlit as st
+from datetime import datetime
 
 # ---------------------------------------------------------------------------
 # PAGE SYSTEM CONFIG
@@ -17,13 +15,14 @@ import streamlit as st
 st.set_page_config(
     page_title="Weather Station",
     page_icon="☁️",
-    layout="centered"
+    layout="wide"
 )
 
 WEATHER_API_KEY = st.secrets.get("WEATHER_API_KEY", None)
+NEWS_API_KEY = st.secrets.get("NEWS_API_KEY", None)
 
 # ---------------------------------------------------------------------------
-# COUNTRY DIRECTORY (country -> representative city for lookup)
+# COUNTRY NODE DIRECTORY
 # ---------------------------------------------------------------------------
 COUNTRIES = {
     "🇸🇱 Sierra Leone": "Freetown",
@@ -50,195 +49,77 @@ COUNTRIES = {
     "🇪🇸 Spain": "Madrid",
     "🇮🇹 Italy": "Rome",
     "🇳🇱 Netherlands": "Amsterdam",
-    "🇸🇪 Sweden": "Stockholm",
-    "🇳🇴 Norway": "Oslo",
-    "🇷🇺 Russia": "Moscow",
     "🇨🇦 Canada": "Toronto",
     "🇧🇷 Brazil": "Rio de Janeiro",
     "🇲🇽 Mexico": "Mexico City",
     "🇦🇷 Argentina": "Buenos Aires",
     "🇦🇺 Australia": "Sydney",
-    "🇳🇿 New Zealand": "Auckland",
-    "🇲🇦 Morocco": "Marrakesh",
-    "🇹🇳 Tunisia": "Tunis",
-    "🇶🇦 Qatar": "Doha",
-    "🇯🇴 Jordan": "Amman",
-    "🇱🇧 Lebanon": "Beirut",
-    "🇮🇩 Iraq": "Baghdad",
-    "🇮🇷 Iran": "Tehran",
-    "🇹🇭 Thailand": "Bangkok",
-    "🇵🇭 Philippines": "Manila",
-    "🇻🇳 Vietnam": "Hanoi",
-    "🇸🇬 Singapore": "Singapore",
+    "🇷🇺 Russia": "Yakutsk",
 }
 
 # ---------------------------------------------------------------------------
-# PREMIUM UI STYLE TOKENS (Cyber Glow System)
+# PREMIUM CYBERPUNK COLOR SYSTEM
 # ---------------------------------------------------------------------------
-INK        = "#05070C"
-SURFACE    = "#0E121B"
-SURFACE_2  = "#161B27"
-LINE       = "#242938"
-TEXT       = "#F1F4FA"
-MUTED      = "#7C879C"
-SIGNAL     = "#28E0C4"
+INK = "#030508"
+SURFACE = "#0B0F19"
+SURFACE_2 = "#121826"
+LINE = "rgba(0, 240, 255, 0.2)"
+TEXT = "#F1F4FA"
+MUTED = "#7C879C"
 
 def temp_mood(temp_c: float):
-    """Return (label, emoji, glow color, meter position 0-1)"""
-    if temp_c < 5:
-        return "Freezing", "🥶", "#4FC3F7", 0.02
-    elif temp_c < 14:
-        return "Cold", "❄️", "#42A5F5", 0.18
-    elif temp_c < 20:
-        return "Cool", "🌥️", "#5DD5C0", 0.35
-    elif temp_c < 26:
-        return "Mild", "😌", "#28E0C4", 0.5
-    elif temp_c < 31:
-        return "Warm", "🌤️", "#FFC94D", 0.68
-    elif temp_c < 36:
-        return "Hot", "🥵", "#FF8A3D", 0.85
-    else:
-        return "Scorching", "🔥", "#FF4433", 1.0
+    if temp_c < 5: return "Freezing", "🥶", "#00F0FF", 0.05
+    elif temp_c < 15: return "Cold", "❄️", "#3A86FF", 0.25
+    elif temp_c < 25: return "Mild", "😌", "#39FF14", 0.50
+    elif temp_c < 35: return "Hot", "🌤️", "#FFB703", 0.75
+    else: return "Scorching", "🔥", "#FF0055", 0.95
 
+# Injecting Global Cyberpunk Layout
 st.markdown(
     f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
-
-    html, body, [class*="css"] {{
-        font-family: 'Inter', sans-serif;
-    }}
-
-    .stApp {{
-        background: radial-gradient(circle at 20% 0%, #0d1a1c 0%, {INK} 55%);
-    }}
-
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap');
+    
+    .stApp {{ background: {INK}; }}
     section[data-testid="stSidebar"] {{
-        background: {SURFACE};
-        border-right: 1px solid {LINE};
+        background: {SURFACE} !important;
+        border-right: 1px solid {LINE} !important;
     }}
-
-    h1, h2, h3, h4 {{
+    h1, h2, h3 {{
         font-family: 'Space Grotesk', sans-serif !important;
-        color: {TEXT} !important;
-        letter-spacing: -0.02em;
+        background: linear-gradient(90deg, #00F0FF 0%, #9D4EDD 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }}
-
-    @keyframes pulseGlow {{
-        0%   {{ box-shadow: 0 0 18px 0 var(--glow-color); }}
-        50%  {{ box-shadow: 0 0 34px 6px var(--glow-color); }}
-        100% {{ box-shadow: 0 0 18px 0 var(--glow-color); }}
-    }}
-
     .weather-card {{
-        background: linear-gradient(160deg, {SURFACE} 0%, {SURFACE_2} 100%);
-        border: 1px solid var(--glow-color);
-        border-radius: 20px;
-        padding: 26px;
-        margin-bottom: 20px;
-        animation: pulseGlow 3.2s ease-in-out infinite;
-    }}
-
-    .location-sub {{
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.75rem;
-        color: var(--glow-color);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        text-shadow: 0 0 8px var(--glow-color);
-    }}
-
-    .temp-display {{
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 700;
-        font-size: 3.6rem;
-        color: {TEXT};
-        line-height: 1;
-        margin: 10px 0;
-        text-shadow: 0 0 22px var(--glow-color);
-    }}
-
-    .mood-badge {{
-        display: inline-block;
-        margin-top: 6px;
-        padding: 6px 14px;
-        border-radius: 999px;
-        border: 1px solid var(--glow-color);
-        color: {TEXT};
-        font-weight: 600;
-        font-size: 0.95rem;
-        box-shadow: 0 0 14px var(--glow-color);
-    }}
-
-    .telemetry-grid {{
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin-top: 22px;
-    }}
-
-    .telemetry-item {{
         background: {SURFACE_2};
-        border: 1px solid {LINE};
-        padding: 12px;
+        border: 1px solid var(--glow-color);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
+        margin-bottom: 25px;
+    }}
+    .extreme-box {{
+        background: rgba(18, 24, 38, 0.8);
         border-radius: 12px;
+        padding: 15px;
+        border: 1px solid {LINE};
         text-align: center;
     }}
-
-    .telemetry-label {{
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.68rem;
-        color: {MUTED};
-        text-transform: uppercase;
-        margin-bottom: 4px;
+    .telemetry-item {{
+        background: {SURFACE};
+        border: 1px solid {LINE};
+        padding: 12px;
+        border-radius: 10px;
+        text-align: center;
     }}
-
-    .telemetry-value {{
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: {TEXT};
-    }}
-
     .meter-track {{
-        position: relative;
-        height: 10px;
-        border-radius: 999px;
-        margin-top: 22px;
-        background: linear-gradient(90deg, #4FC3F7, #28E0C4, #FFC94D, #FF8A3D, #FF4433);
+        position: relative; height: 8px; border-radius: 4px; margin-top: 20px;
+        background: linear-gradient(90deg, #00F0FF, #39FF14, #FFB703, #FF0055);
     }}
-
     .meter-marker {{
-        position: absolute;
-        top: -6px;
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: {TEXT};
-        border: 3px solid var(--glow-color);
-        box-shadow: 0 0 12px var(--glow-color);
-        transform: translateX(-50%);
-    }}
-
-    .meter-labels {{
-        display: flex;
-        justify-content: space-between;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.65rem;
-        color: {MUTED};
-        margin-top: 8px;
-        text-transform: uppercase;
-    }}
-
-    div[data-testid="stTextInput"] input {{
-        background-color: {SURFACE_2} !important;
-        color: {TEXT} !important;
-        border: 1px solid {LINE} !important;
-        border-radius: 10px !important;
-    }}
-
-    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {{
-        color: {TEXT} !important;
+        position: absolute; top: -5px; width: 18px; height: 18px; border-radius: 50%;
+        background: {TEXT}; border: 3px solid var(--glow-color); transform: translateX(-50%);
     }}
     </style>
     """,
@@ -246,189 +127,152 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# SIDEBAR CONTROL ROOM
+# GLOBAL RADAR EXTREMES LOCATOR
 # ---------------------------------------------------------------------------
+@st.cache_data(ttl=1800)
+def fetch_global_extremes():
+    if not WEATHER_API_KEY:
+        return {"hottest": ("Dubai", 41.2), "coldest": ("Yakutsk", -32.5)}
+    
+    highest_temp = -999.0
+    lowest_temp = 999.0
+    hottest_city = "Unknown"
+    coldest_city = "Unknown"
+    
+    # Sample a rapid strategic subnet checklist of extreme key nodes
+    check_nodes = ["Yakutsk", "London", "Cairo", "Dubai", "Freetown", "Toronto", "Riyadh", "Sydney"]
+    for node in check_nodes:
+        try:
+            r = requests.get(f"https://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={node}", timeout=4)
+            if r.status_code == 200:
+                val = r.json().get("current", {}).get("temp_c", 0.0)
+                if val > highest_temp:
+                    highest_temp = val
+                    hottest_city = node
+                if val < lowest_temp:
+                    lowest_temp = val
+                    coldest_city = node
+        except:
+            continue
+    return {"hottest": (hottest_city, highest_temp), "coldest": (coldest_city, lowest_temp)}
+
+# ---------------------------------------------------------------------------
+# INTERACTIVE DATA CONTROLLERS
+# ---------------------------------------------------------------------------
+st.title("⚡ Telemetry Weather Core")
+st.caption("High-fidelity environmental monitoring data feeds.")
+
+# Fetch extremes data early for main panel assembly layout
+extremes = fetch_global_extremes()
+
+# Sidebar Setup
 with st.sidebar:
     st.markdown("### 🗺️ Navigation Hub")
-    st.caption("Pick a country node or launch a deep radar search.")
+    selection = st.selectbox("Select Station Node", options=list(COUNTRIES.keys()) + ["🔍 Custom Search..."])
+    city = st.text_input("Target Input", "Freetown") if selection == "🔍 Custom Search..." else COUNTRIES[selection]
+    unit_toggle = st.radio("Display Metric System", ["°C", "°F"], horizontal=True)
 
-    country_options = list(COUNTRIES.keys()) + ["🔍 Custom Search..."]
-    selection = st.selectbox("Country", options=country_options, index=0)
+# Main Grid Layout split into Data Engine Frame & Real-Time Weather News
+col_main, col_news = st.columns([2, 1])
 
-    if selection == "🔍 Custom Search...":
-        city = st.text_input("🔍 Input target global city name:", value="Freetown")
+with col_main:
+    if not WEATHER_API_KEY:
+        st.info("🔌 Core API running in simulation framework mode.")
+        temp_c, feelslike_c, humidity, wind_kph, uv, cond_text, icon = 28.0, 32.0, 80, 12, 6.0, "Partly Cloudy", "https://cdn.weatherapi.com/weather/64x64/day/116.png"
+        city_name, country, local_time = "Freetown", "Sierra Leone", "12:00 PM"
     else:
-        city = COUNTRIES[selection]
+        try:
+            res = requests.get(f"https://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={city}", timeout=10)
+            data = res.json()
+            loc = data["location"]
+            cur = data["current"]
+            city_name, country, local_time = loc["name"], loc["country"], loc["localtime"]
+            temp_c, feelslike_c, humidity, wind_kph, uv = cur["temp_c"], cur["feelslike_c"], cur["humidity"], cur["wind_kph"], cur["uv"]
+            cond_text = cur["condition"]["text"]
+            icon = "https:" + cur["condition"]["icon"] if cur["condition"]["icon"].startswith("//") else cur["condition"]["icon"]
+        except Exception as e:
+            st.error(f"Fault parsing tracking metrics data stream: {e}")
+            st.stop()
 
-    st.divider()
-    unit_toggle = st.radio("Units", ["°C", "°F"], horizontal=True)
-    st.divider()
-    st.caption("Telemetry feeds refresh dynamically on country swap.")
+    # Apply Conversion Logic if Requested
+    t_val = round(temp_c * 9/5 + 32, 1) if unit_toggle == "°F" else temp_c
+    f_val = round(feelslike_c * 9/5 + 32, 1) if unit_toggle == "°F" else feelslike_c
+    lbl = "°F" if unit_toggle == "°F" else "°C"
+    
+    mood_lbl, mood_emoji, color, position = temp_mood(temp_c)
 
-# ---------------------------------------------------------------------------
-# INTERFACE MAIN COMPONENT VIEW
-# ---------------------------------------------------------------------------
-st.title("☁️ Invincible 911 Weather Station")
-st.caption("Real-time high-fidelity atmospheric tracking and global condition analytics.")
-
-
-def render_card(city_name, country, local_time, temp_c, feelslike_c, humidity,
-                wind_kph, uv, condition_text, icon_url, is_live=True):
-    if unit_toggle == "°F":
-        temp_disp = round(temp_c * 9 / 5 + 32, 1)
-        feels_disp = round(feelslike_c * 9 / 5 + 32, 1)
-        unit_label = "°F"
-    else:
-        temp_disp = temp_c
-        feels_disp = feelslike_c
-        unit_label = "°C"
-
-    mood_label, mood_emoji, glow_color, meter_pos = temp_mood(temp_c)
-    feed_label = "LIVE NODE" if is_live else "SIMULATION FEED"
-
+    # Core Telemetry Visual Card Output
     st.markdown(
         f"""
-        <div class="weather-card" style="--glow-color: {glow_color};">
-            <div class="location-sub">{feed_label} · LOCAL CLOCK: {local_time}</div>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px;">
+        <div class="weather-card" style="--glow-color: {color};">
+            <div style="font-family:'JetBrains Mono'; font-size:0.75rem; color:{color}; letter-spacing:2px;">SYS_NODE_ACTIVE // TIME: {local_time}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top:15px;">
                 <div>
-                    <h2 style='margin:0;'>{city_name}</h2>
-                    <div style="color: {MUTED}; font-size: 0.9rem; margin-top: 2px;">{country}</div>
-                    <div class="temp-display">{temp_disp}{unit_label}</div>
-                    <div style="color: {TEXT}; font-weight: 500; font-size: 1.0rem;">
-                        Feels Like {feels_disp}{unit_label} · {condition_text}
-                    </div>
-                    <div class="mood-badge">{mood_emoji} {mood_label}</div>
+                    <h2 style="margin:0; font-size:2.2rem;">{city_name}, {country}</h2>
+                    <div style="font-size:3.5rem; font-weight:700; margin:10px 0; text-shadow: 0 0 15px {color};">{t_val}{lbl}</div>
+                    <div style="color:{TEXT}; font-size:1.1rem; font-weight:500;">Feels like {f_val}{lbl} &bull; {cond_text}</div>
+                    <span class="mood-badge" style="border: 1px solid {color}; padding:4px 12px; border-radius:20px; font-size:0.85rem; color:{TEXT}; box-shadow: 0 0 10px {color};">{mood_emoji} {mood_lbl}</span>
                 </div>
-                <div>
-                    <img src="{icon_url}" style="width: 100px; height: 100px; filter: drop-shadow(0 0 14px {glow_color});">
-                </div>
+                <img src="{icon}" style="width:110px; height:110px; filter: drop-shadow(0 0 12px {color});">
             </div>
-
-            <div class="telemetry-grid">
-                <div class="telemetry-item">
-                    <div class="telemetry-label">💧 Humidity</div>
-                    <div class="telemetry-value">{humidity}%</div>
-                </div>
-                <div class="telemetry-item">
-                    <div class="telemetry-label">💨 Wind Flow</div>
-                    <div class="telemetry-value">{wind_kph} kph</div>
-                </div>
-                <div class="telemetry-item">
-                    <div class="telemetry-label">☀️ Ultraviolet</div>
-                    <div class="telemetry-value">{uv}</div>
-                </div>
+            <div class="telemetry-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-top:25px;">
+                <div class="telemetry-item"><div style="font-size:0.7rem; color:{MUTED}; font-family:'JetBrains Mono';">💧 HUMIDITY</div><div style="font-size:1.2rem; font-weight:700; color:{TEXT};">{humidity}%</div></div>
+                <div class="telemetry-item"><div style="font-size:0.7rem; color:{MUTED}; font-family:'JetBrains Mono';">💨 WIND FLOW</div><div style="font-size:1.2rem; font-weight:700; color:{TEXT};">{wind_kph} kph</div></div>
+                <div class="telemetry-item"><div style="font-size:0.7rem; color:{MUTED}; font-family:'JetBrains Mono';">☀️ ULTRAVIOLET</div><div style="font-size:1.2rem; font-weight:700; color:{TEXT};">{uv}</div></div>
             </div>
-
-            <div class="meter-track">
-                <div class="meter-marker" style="left: {meter_pos * 100}%;"></div>
-            </div>
-            <div class="meter-labels">
-                <span>🥶 Freezing</span>
-                <span>❄️ Cold</span>
-                <span>😌 Mild</span>
-                <span>🥵 Hot</span>
-                <span>🔥 Scorching</span>
-            </div>
+            <div class="meter-track"><div class="meter-marker" style="left:{position*100}%; --glow-color:{color};"></div></div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
+    # Global Extreme Nodes Render Section
+    st.write("### 🌋 Planetary Thermal Extremes")
+    c_hot, c_cold = st.columns(2)
+    with c_hot:
+        st.markdown(
+            f'<div class="extreme-box" style="border-color:#FF0055;"><div style="color:#FF0055; font-size:0.8rem; font-weight:700;">🔥 HOTTEST STATION RECORDED</div>'
+            f'<div style="font-size:1.4rem; font-weight:700; margin:5px 0;">{extremes["hottest"][0]}</div>'
+            f'<div style="color:{MUTED}; font-size:1.1rem;">{extremes["hottest"][1]}°C</div></div>', 
+            unsafe_allow_html=True
+        )
+    with c_cold:
+        st.markdown(
+            f'<div class="extreme-box" style="border-color:#00F0FF;"><div style="color:#00F0FF; font-size:0.8rem; font-weight:700;">🥶 COLDEST STATION RECORDED</div>'
+            f'<div style="font-size:1.4rem; font-weight:700; margin:5px 0;">{extremes["coldest"][0]}</div>'
+            f'<div style="color:{MUTED}; font-size:1.1rem;">{extremes["coldest"][1]}°C</div></div>', 
+            unsafe_allow_html=True
+        )
 
-if not WEATHER_API_KEY:
-    st.warning("⚠️ Atmospheric Core API Key Missing")
-    st.markdown(
-        "To switch out of demo simulation mode and tap into live monitoring assets:\n"
-        "1. Create a key at **WeatherAPI.com**.\n"
-        "2. Save it as `WEATHER_API_KEY` in your Streamlit secrets."
-    )
-    st.markdown("---")
-    st.markdown("### 🌆 Telemetry Station Frame (Simulation Mode)")
-
-    render_card(
-        city_name="Freetown",
-        country="Sierra Leone",
-        local_time="15:36",
-        temp_c=28,
-        feelslike_c=31,
-        humidity=82,
-        wind_kph=14,
-        uv=5.0,
-        condition_text="Partly Cloudy",
-        icon_url="https://cdn.weatherapi.com/weather/64x64/day/116.png",
-        is_live=False
-    )
-
-else:
-    if city:
+# ---------------------------------------------------------------------------
+# REAL-TIME METEOROLOGICAL NEWS ENGINE
+# ---------------------------------------------------------------------------
+with col_news:
+    st.write("### 📰 Climate News Feed")
+    
+    if not NEWS_API_KEY:
+        st.info("Missing `NEWS_API_KEY` token secret. Displaying simulated data updates.")
+        mock_stories = [
+            ("Severe heat wave warning issued across parts of regional global centers.", "Meteorologists track shifting high pressure zones."),
+            ("Global weather satellites track unusual atmospheric system development.", "Low pressure anomalies bring storms inland.")
+        ]
+        for title, desc in mock_stories:
+            with st.container(border=True):
+                st.markdown(f"**{title}**")
+                st.caption(desc)
+    else:
         try:
-            url = "https://api.weatherapi.com/v1/current.json"
-            params = {"key": WEATHER_API_KEY, "q": city, "aqi": "no"}
-            response = requests.get(url, params=params, timeout=10)
-
-            if response.status_code == 400:
-                st.error("❌ Specified location not found. Check the city name.")
-            elif response.status_code != 200:
-                st.error(f"⚠️ Telemetry fault — status code: {response.status_code}")
-            else:
-                data = response.json()
-
-                loc = data.get("location", {})
-                city_name = loc.get("name", "Unknown Node")
-                country = loc.get("country", "")
-                local_time = loc.get("localtime", "")
-
-                current = data.get("current", {})
-                temp_c = current.get("temp_c", 0)
-                feelslike_c = current.get("feelslike_c", 0)
-                humidity = current.get("humidity", 0)
-                wind_kph = current.get("wind_kph", 0)
-                uv = current.get("uv", 0)
-
-                condition = current.get("condition", {})
-                condition_text = condition.get("text", "Unknown State")
-                icon_url = condition.get("icon", "")
-                if icon_url.startswith("//"):
-                    icon_url = "https:" + icon_url
-
-                render_card(
-                    city_name, country, local_time, temp_c, feelslike_c,
-                    humidity, wind_kph, uv, condition_text, icon_url, is_live=True
-                )
-
-                # ---------------------------------------------------------------
-                # 💡 EXTRA IDEA: Quick multi-country comparison strip
-                # ---------------------------------------------------------------
-                st.markdown("### 🌍 Global Snapshot")
-                st.caption("Quick glance at a few other stations around the world.")
-
-                compare_cities = ["London", "New York", "Dubai", "Tokyo"]
-                compare_cities = [c for c in compare_cities if c != city][:3]
-
-                cols = st.columns(len(compare_cities))
-                for col, c_city in zip(cols, compare_cities):
-                    try:
-                        r = requests.get(url, params={"key": WEATHER_API_KEY, "q": c_city, "aqi": "no"}, timeout=6)
-                        if r.status_code == 200:
-                            d = r.json()
-                            t = d["current"]["temp_c"]
-                            mood_label, mood_emoji, glow_color, _ = temp_mood(t)
-                            with col:
-                                st.markdown(
-                                    f"""
-                                    <div style="background:{SURFACE_2}; border:1px solid {glow_color};
-                                                border-radius:12px; padding:10px; text-align:center;
-                                                box-shadow: 0 0 10px {glow_color};">
-                                        <div style="font-size:0.75rem; color:{MUTED};">{c_city}</div>
-                                        <div style="font-size:1.3rem; font-weight:700; color:{TEXT};">{t}°C</div>
-                                        <div style="font-size:0.8rem;">{mood_emoji} {mood_label}</div>
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
-                    except Exception:
-                        pass
-
+            # Query News API specifically targeting weather & environmental dynamics
+            news_url = f"https://newsapi.org/v2/everything?q=weather+climate&pageSize=4&apiKey={NEWS_API_KEY}"
+            news_res = requests.get(news_url, timeout=5).json()
+            articles = news_res.get("articles", [])
+            
+            if not articles:
+                st.caption("No recent telemetry broadcast bulletins discovered.")
+            for art in articles:
+                with st.container(border=True):
+                    st.markdown(f"**[{art['title']}]({art['url']})**")
+                    st.write(f"<span style='color:{MUTED}; font-size:0.85rem;'>{art.get('description','')[:120]}...</span>", unsafe_allow_html=True)
         except Exception as e:
-            st.error(f"Unable to safely decode remote atmospheric telemetry stream: {e}")
+            st.caption("News data feed processing currently unavailable.")
+    
