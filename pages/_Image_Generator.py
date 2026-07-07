@@ -122,4 +122,4 @@ if st.button("🚀 IGNITE QUANTUM RENDER"):
             except Exception as rendering_anomaly:
                 st.error(f"Render engine anomaly detected: {rendering_anomaly}")
                 st.info("Note: Free models sometimes fall asleep. If it mentions a 503 error, wait 10 seconds and try again while the engine warms up!")
-  
+                
