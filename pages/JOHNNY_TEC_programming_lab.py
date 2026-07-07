@@ -8,6 +8,7 @@ Specialized in Python, Full-Stack Generation, Complex Bug Diagnostics, and Archi
 import streamlit as st
 import base64
 import os
+import time
 from groq import Groq
 
 # ---------------------------------------------------------------------------
@@ -23,21 +24,22 @@ st.set_page_config(
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", None))
 
 # ---------------------------------------------------------------------------
-# HARDCORE CYBERPUNK CSS DESIGN SYSTEM
+# NEXT-GEN CYBERPUNK CSS DESIGN SYSTEM
 # ---------------------------------------------------------------------------
-INK = "#030508"
-SURFACE = "#0B0F19"
-SURFACE_LIGHT = "#121826"
+INK = "#020408"
+SURFACE = "#070C16"
+SURFACE_LIGHT = "#0F172A"
 CYAN = "#00F0FF"
-VIOLET = "#9D4EDD"
-MATRIX = "#39FF14"
-TEXT = "#F1F4FA"
-MUTED = "#7C879C"
+VIOLET = "#A855F7"
+MATRIX = "#22C55E"
+TEXT = "#F8FAFC"
+MUTED = "#64748B"
+HOT_PINK = "#F43F5E"
 
 st.markdown(
     f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;700&display=swap');
     
     .stApp {{
         background: {INK};
@@ -49,63 +51,98 @@ st.markdown(
     }}
     
     h1, h2, h3, h4 {{
-        font-family: 'Space Grotesk', sans-serif !important;
+        font-family: 'Orbitron', sans-serif !important;
         color: {TEXT} !important;
+        letter-spacing: 1px;
     }}
     
     .terminal-title {{
-        background: linear-gradient(90deg, {CYAN} 0%, {VIOLET} 100%);
+        background: linear-gradient(90deg, {CYAN} 0%, {VIOLET} 50%, {HOT_PINK} 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.8rem !important;
+        font-size: 3rem !important;
         font-weight: 700;
+        font-family: 'Orbitron', sans-serif;
         letter-spacing: -1px;
         margin-bottom: 0px;
+        filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.3));
+    }}
+    
+    /* Animated Ticker Status */
+    @keyframes pulse-glow {{
+        0% {{ text-shadow: 0 0 4px {MATRIX}; opacity: 0.8; }}
+        50% {{ text-shadow: 0 0 12px {MATRIX}, 0 0 20px {MATRIX}; opacity: 1; }}
+        100% {{ text-shadow: 0 0 4px {MATRIX}; opacity: 0.8; }}
     }}
     
     .status-ticker {{
         font-family: 'JetBrains Mono', monospace;
         color: {MATRIX};
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         letter-spacing: 2px;
-        margin-bottom: 20px;
-        text-shadow: 0 0 8px {MATRIX};
+        margin-bottom: 25px;
+        animation: pulse-glow 2.5s infinite;
     }}
     
-    /* Premium Panel Box styling */
+    /* Premium Telemetry Grid Cards */
+    .telemetry-card {{
+        background: {SURFACE};
+        border-left: 3px solid {CYAN};
+        border-radius: 6px;
+        padding: 12px 18px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        font-family: 'JetBrains Mono', monospace;
+    }}
+    
+    /* Premium Control Input Frame */
     .lab-panel {{
-        background: {SURFACE_LIGHT};
-        border: 1px solid rgba(157, 78, 221, 0.3);
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 0 20px rgba(157, 78, 221, 0.1);
-        margin-bottom: 20px;
+        background: linear-gradient(145deg, {SURFACE_LIGHT}, {SURFACE});
+        border: 1px solid rgba(168, 85, 247, 0.4);
+        border-radius: 14px;
+        padding: 28px;
+        box-shadow: 0 0 30px rgba(168, 85, 247, 0.15);
+        margin-bottom: 25px;
     }}
     
-    /* Code area styling overrides */
+    /* Code block syntax container override */
     div[data-testid="stMarkdownContainer"] pre {{
-        border: 1px solid rgba(0, 240, 255, 0.2) !important;
-        background-color: {SURFACE} !important;
-        border-radius: 8px !important;
-        box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.05);
+        border: 1px solid rgba(0, 240, 255, 0.25) !important;
+        background-color: #030712 !important;
+        border-radius: 10px !important;
+        padding: 15px !important;
+        box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.08) !important;
     }}
     
-    /* Form input styling overrides */
+    /* Input textarea glowing focus */
     div[data-testid="stTextArea"] textarea {{
         background-color: {SURFACE} !important;
         color: {TEXT} !important;
-        border: 1px solid rgba(157, 78, 221, 0.3) !important;
+        border: 1px solid rgba(168, 85, 247, 0.4) !important;
+        border-radius: 8px !important;
         font-family: 'JetBrains Mono', monospace !important;
+        transition: all 0.3s ease;
+    }}
+    div[data-testid="stTextArea"] textarea:focus {{
+        border-color: {CYAN} !important;
+        box-shadow: 0 0 15px rgba(0, 240, 255, 0.2) !important;
     }}
     
-    .mode-badge {{
-        background: rgba(0, 240, 255, 0.1);
-        border: 1px solid {CYAN};
-        color: {CYAN};
-        padding: 4px 12px;
-        border-radius: 6px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.75rem;
+    /* Custom button aesthetics */
+    div.stButton > button:first-child {{
+        background: linear-gradient(90deg, #7C3AED 0%, #C084FC 100%) !important;
+        color: white !important;
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 700 !important;
+        letter-spacing: 2px !important;
+        border: none !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4) !important;
+        transition: all 0.3s ease !important;
+    }}
+    div.stButton > button:first-child:hover {{
+        background: linear-gradient(90deg, #C084FC 0%, #00F0FF 100%) !important;
+        box-shadow: 0 0 25px rgba(0, 240, 255, 0.6) !important;
+        transform: translateY(-1px);
     }}
     </style>
     """,
@@ -113,7 +150,7 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# CORE LOGIC UTILITIES
+# CORE IMAGE ENCODING UTILITIES
 # ---------------------------------------------------------------------------
 def encode_image_base64(uploaded_file):
     """Safely converts file uploads or camera frames into Base64 strings for vision tracking."""
@@ -126,111 +163,130 @@ def encode_image_base64(uploaded_file):
 # HEADER BRANDING FRAME
 # ---------------------------------------------------------------------------
 st.markdown('<div class="terminal-title">JOHNNY TEC PROGRAMMING LAB</div>', unsafe_allow_html=True)
-st.markdown('<div class="status-ticker">// MAINFRAME ONLINE // CORE ENGINE: PYTHON FOCUS</div>', unsafe_allow_html=True)
+st.markdown('<div class="status-ticker">● CORE COMPILER STATUS: ULTRA-READY // SYSTEM STACK LINKED</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# CONTROL ROOM SIDE PANEL
+# MAINFRAME TELEMETRY GRID
+# ---------------------------------------------------------------------------
+t_col1, t_col2, t_col3, t_col4 = st.columns(4)
+with t_col1:
+    st.markdown(f'<div class="telemetry-card"><span style="color:{MUTED}; font-size:0.75rem;">PRIMARY MODULE</span><br><span style="color:{CYAN}; font-size:1.05rem; font-weight:bold;">FULL-STACK QUANTUM</span></div>', unsafe_allow_html=True)
+with t_col2:
+    st.markdown(f'<div class="telemetry-card"><span style="color:{MUTED}; font-size:0.75rem;">VISION TRANSLATOR</span><br><span style="color:{VIOLET}; font-size:1.05rem; font-weight:bold;">QWEN 3.6 MULTIMODAL</span></div>', unsafe_allow_html=True)
+with t_col3:
+    st.markdown(f'<div class="telemetry-card"><span style="color:{MUTED}; font-size:0.75rem;">REASONING DEPTH</span><br><span style="color:{MATRIX}; font-size:1.05rem; font-weight:bold;">GPT-OSS 120B ENGINE</span></div>', unsafe_allow_html=True)
+with t_col4:
+    st.markdown(f'<div class="telemetry-card"><span style="color:{MUTED}; font-size:0.75rem;">COMPILATION SPEED</span><br><span style="color:{HOT_PINK}; font-size:1.05rem; font-weight:bold;">~660 TOKENS / SEC</span></div>', unsafe_allow_html=True)
+
+st.write("")
+
+# ---------------------------------------------------------------------------
+# CONTROL ROOM SIDE PANEL (OPERATION OPTIONS & IMAGE CAPTURE)
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🛠️ Operation Directives")
     
-    # 1. Select the main technical objective
+    # 1. Target Objectives
     lab_mode = st.selectbox(
         "Select Operation Target",
         [
-            "🚀 Full-Stack Architect (Build Apps & Guides)",
-            "🩺 Error Core Analyzer (Debug Stack Traces)",
-            "🏗️ Massive Task Compiler (Breakdown Large Codebases)"
+            "🚀 Full-Stack Architect (Build Apps & Complete Guides)",
+            "🩺 Error Core Analyzer (Debug Stack Traces & Instant Fixes)",
+            "🏗️ Massive Task Compiler (Breakdown Large Codebases & Files)"
         ]
     )
     
-    # 2. Select target language platform
+    # 2. Target Languages
     target_lang = st.selectbox(
-        "Primary Code Core",
-        ["Python (Core Focal Point)", "JavaScript / TypeScript", "HTML & CSS Complete Frontend", "C++ System Programming", "Shell Scripting / Bash"]
+        "Primary Code Core Stack",
+        ["Python (Core Focal Point)", "JavaScript / TypeScript", "HTML, CSS & JS Complete Site", "C++ System Programming", "Shell / Termux Bash Automation"]
     )
     
     st.divider()
     
-    # 3. Code Upload Assets
-    st.markdown("### 📂 Blueprint Ingestion Matrix")
-    uploaded_code_file = st.file_uploader("Upload Payload Script", type=["py", "txt", "js", "html", "css", "cpp", "json"])
+    # 3. Payload File Ingestor
+    st.markdown("### 📂 Structural Script Payload")
+    uploaded_code_file = st.file_uploader("Drop project code files or errors", type=["py", "txt", "js", "html", "css", "cpp", "json"])
     
-    # 4. Physical Document Camera Matrix
-    st.markdown("### 📸 Document Core Scanner")
-    camera_capture = st.camera_input("Scan Code Blueprint / Error Document")
+    # 4. Premium Live Camera Scanner
+    st.markdown("### 📸 Blueprint Document Scanner")
+    camera_capture = st.camera_input("Capture handwritten wireframes, screen errors, or specs")
 
-st.divider()
+st.write("")
 
 # ---------------------------------------------------------------------------
-# MAIN OPERATIONAL INTERFACE
+# MAIN PROGRAMMING INTERFACE CANVAS
 # ---------------------------------------------------------------------------
 if not GROQ_API_KEY:
-    st.error("🚨 CORE REACTION FAILURE: `GROQ_API_KEY` missing from cluster secrets configuration environment.")
+    st.error("🚨 SYSTEM CONSOLE ALERT: `GROQ_API_KEY` missing from your Streamlit configuration vault secrets.")
     st.stop()
 
 client = Groq(api_key=GROQ_API_KEY)
 
-# Assemble text inputs based on the target execution mode
+# Command Specification Box
 st.markdown(f'<div class="lab-panel">', unsafe_allow_html=True)
-st.markdown(f"### ⚙️ Operational Core Target Settings")
+st.markdown(f"### ⚙️ Mainframe Command Input")
 
 user_prompt = st.text_area(
-    "Define your build requirements, paste buggy scripts, or layout your massive software design parameters below:",
-    height=180,
-    placeholder="Example: Design a responsive modern landing page for an app using streamlit components or write an automated data scraping engine in python with step-by-step installation instructions..."
+    "Enter detailed construction maps, requirements, code blocks, or tell the mainframe what app you want to build:",
+    height=200,
+    placeholder="Example: Act as a master full-stack engineer. Build a beautiful complete web app with a gorgeous interface, and supply a detailed guide explaining the structure, files, and deployment layout..."
 )
 
-# Extract content from uploaded text assets if available
+# Parse content from text scripts uploaded
 file_content = ""
 if uploaded_code_file:
     try:
         file_content = uploaded_code_file.getvalue().decode("utf-8")
-        st.success(f"Successfully loaded code payload: `{uploaded_code_file.name}` ({len(file_content)} characters extracted)")
+        st.success(f"📂 Extracted script stream: `{uploaded_code_file.name}` ({len(file_content)} characters ready)")
     except Exception as e:
-        st.error(f"Error reading file structure payload data stream: {e}")
+        st.error(f"Error reading file structure block: {e}")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Process visual assets if present (Vision Model Router)
+# Parse base64 string from camera scanner frame
 base64_visual_payload = None
 if camera_capture:
     base64_visual_payload = encode_image_base64(camera_capture)
-    st.image(camera_capture, caption="📷 Document Snapshot Intercepted Successfully", width=300)
+    st.markdown("#### 👁️ Captured Snapshot Metadata")
+    st.image(camera_capture, caption="Intercepted Frame Buffer Matrix Ready for Processing", width=340)
 
 # ---------------------------------------------------------------------------
-# COMPILING LOGIC ENGINE ON TRIGGER CLICK
+# CORE SYSTEM LOGIC ENGINE ENFORCEMENT
 # ---------------------------------------------------------------------------
-if st.button("⚡ EXECUTE COMPILER RUN", type="primary", use_container_width=True):
+if st.button("⚡ EXECUTE SYSTEM COMPILER RUN", use_container_width=True):
     if not user_prompt and not file_content and not base64_visual_payload:
-        st.warning("⚠️ Mainframe processing input empty. Please specify code parameters, capture image, or load target script payloads.")
+        st.warning("⚠️ Action blocked. Provide instructions, scan blueprints, or load code payloads before compiling.")
     else:
-        # Construct the execution instruction prompt
+        # High level system agent identity instructions
         system_instructions = (
-            "You are the premier AI core of JOHNNY TEC programming lab, an elite master engineer and world class full-stack designer. "
-            f"Your current operation objective is: {lab_mode}. The target technology stack is centered on: {target_lang}. "
-            "When writing web apps or full websites, provide complete, production-ready, clean, modular code snippets along with an explicit step-by-step technical deployment instruction roadmap showing configuration directories, required packages, and runtime executions. "
-            "When analyzing errors, pinpoint exactly why the failure trace occurs and present optimized remediation patches. "
-            "For massive assignments, structure structural breakdowns into clean milestone deployment checklists."
+            "You are the master terminal artificial intelligence core of the JOHNNY TEC Programming Lab. "
+            "You are an elite, world-class full-stack engineer specialized completely in Python, web architecture, mobile applications, and rigorous optimization. "
+            f"Current Operation Target Mode: {lab_mode}. Target Engine Language Core: {target_lang}.\n\n"
+            "CRITICAL PROTOCOLS:\n"
+            "1. When generating web apps or full websites, write production-ready, clean, modular code snippets without placeholder summaries.\n"
+            "2. Always follow up your code with a comprehensive, step-by-step technical deployment instruction map covering folder directories, package installations, and execution terminal commands.\n"
+            "3. When analyzing error screenshots or code text blocks, pinpoint the exact structural root cause and display the fully fixed, drop-in replacement code script.\n"
+            "4. For massive assignments, parse requirements into a clean check-list milestone roadmap."
         )
         
-        # Combine instructions with structural file scripts if provided
+        # Merge input data variables seamlessly
         combined_user_text = user_prompt if user_prompt else ""
         if file_content:
             combined_user_text += f"\n\n--- INGESTED PAYLOAD ATTACHMENT TEXT ---\n{file_content}"
             
         messages = []
         
-        # Route processing depending on visual payload availability
+        # Route processing depending on visual payload status
         if base64_visual_payload:
-            # Route to Groq's high speed Llama 3.2 Vision Model engine
-            model_target = "llama-3.2-11b-vision-preview"
+            # UPGRADED 2026 ROUTE: Harness Groq's high-speed Qwen 3.6 Multimodal Vision engine
+            model_target = "qwen/qwen3.[span_1](start_span)6-27b"[span_1](end_span)
             messages = [
                 {"role": "system", "content": system_instructions},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": f"Analyze the scanned blueprint attachment along with these directives:\n{combined_user_text}"},
+                        {"type": "text", "text": f"Analyze the scanned blueprint capture along with these directives:\n{combined_user_text}"},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -241,35 +297,38 @@ if st.button("⚡ EXECUTE COMPILER RUN", type="primary", use_container_width=Tru
                 }
             ]
         else:
-            # Route to Groq's flagship intelligence model engine
-            model_target = "llama-3.3-70b-versatile"
+            # UPGRADED 2026 ROUTE: Harness Groq's flagship ultra-reasoning model for pure text processing
+            model_target = "openai/gpt-oss-120b"
             messages = [
                 {"role": "system", "content": system_instructions},
                 {"role": "user", "content": combined_user_text}
             ]
             
         try:
-            with st.spinner("⚡ Processing system variables via compiler logic engine cores..."):
+            start_time = time.time()
+            
+            with st.spinner("⚡ Matrix loop routing activated... Compiling data structure assets..."):
                 completion = client.chat.completions.create(
                     model=model_target,
                     messages=messages,
-                    temperature=0.2,
+                    temperature=0.15,
                     max_tokens=4096,
                     stream=True
                 )
                 
-                # Render results into a beautiful terminal output frame
-                st.markdown("### 📡 Mainframe Compilation Transmission Output")
+                st.markdown("### 📡 Mainframe Transmission Output")
                 output_placeholder = st.empty()
                 full_stream_response = ""
                 
+                # Stream responses in real-time
                 for chunk in completion:
                     delta = chunk.choices[0].delta.content
                     if delta:
                         full_stream_response += delta
                         output_placeholder.markdown(full_stream_response)
                         
-            st.success("🏁 Core iteration operations complete. Scripts successfully organized.")
+            elapsed_time = round(time.time() - start_time, 2)
+            st.success(f"🏁 System Core Execution Success! Pipeline finalized in {elapsed_time} seconds.")
             
         except Exception as err:
             st.error(f"Execution matrix fault encountered: {err}")
