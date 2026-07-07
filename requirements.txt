@@ -5,3 +5,8 @@ groq
 openai
 anthropic
 streamlit
+google-generativeai
+groq
+streamlit
+huggingface_hub
+Pillow
