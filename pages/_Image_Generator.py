@@ -58,19 +58,19 @@ st.markdown(
 HF_TOKEN = st.secrets.get("HF_TOKEN", os.environ.get("HF_TOKEN", ""))
 
 # ---------------------------------------------------------------------------
-# 2. SIDEBAR RENDERING CONTROLS
+# 2. SIDEBAR RENDERING CONTROLS (FREE TIER ENDPOINTS)
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🧬 Imaging Models")
     model_choice = st.selectbox(
         "Select Generative Core",
         [
-            "black-forest-labs/FLUX.1-dev",
-            "stabilityai/stable-diffusion-xl-base-1.0"
+            "black-forest-labs/FLUX.1-schnell",       # 100% Free Community Tier
+            "stabilityai/stable-diffusion-2-1"        # 100% Free Community Tier
         ]
     )
     st.divider()
-    st.markdown("💡 *Tip: FLUX.1 handles high-fidelity graphics and text extremely well, while SDXL is great for broad, artistic concepts.*")
+    st.markdown("💡 *Tip: FLUX.1-schnell runs on the free open community pipeline, bypassing the 402 payment router restrictions.*")
 
 # ---------------------------------------------------------------------------
 # 3. INTERFACE HEADERS & IMAGING RUNTIME
