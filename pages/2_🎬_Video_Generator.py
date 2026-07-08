@@ -7,7 +7,8 @@ Generates short video clips using Hugging Face Free Inference
 
 import streamlit as st
 import os
-from huggingface_hub import InferenceClient
+import requests
+import time
 
 # ---------------------------------------------------------------------------
 # 1. PAGE CONFIG & MATRIX STYLING
@@ -19,8 +20,6 @@ SURFACE = "#070C16"
 CYAN = "#00F0FF"
 MATRIX = "#22C55E"
 TEXT = "#F8FAFC"
-MUTED = "#64748B"
-HOT_PINK = "#F43F5E"
 
 st.markdown(
     f"""
@@ -90,15 +89,15 @@ with st.sidebar:
     model_choice = st.selectbox(
         "Select Generative Core",
         [
-            "damo-vilab/text-to-video-ms-1.7b",  # Active ModelScope repository
-            "cerspense/zeroscope_v2_576w"        # Active Zeroscope repository
+            "damo-vilab/text-to-video-ms-1.7b",  # Core ModelScope video engine
+            "cerspense/zeroscope_v2_576w"        # Core Zeroscope video engine
         ]
     )
     st.divider()
-    st.markdown("💡 *Note: Video rendering requires massive computational power. Generating on a 100% free server may take 1-3 minutes. If it fails, wait 30 seconds and try again.*")
+    st.markdown("💡 *Note: Video rendering requires massive computational power. Generating on a 100% free server may take 1-3 minutes.*")
 
 # ---------------------------------------------------------------------------
-# 3. INTERFACE HEADERS & VIDEO RUNTIME
+# 3. INTERFACE HEADERS & VIDEO RUNTIME via direct API Requests
 # ---------------------------------------------------------------------------
 st.markdown('<div class="video-title">CINEMATIC VIDEO MATRIX</div>', unsafe_allow_html=True)
 st.markdown('<div class="status-ticker">● VIDEO RENDERING PIPELINE // FREE OPEN-SOURCE HUB ACTIVE</div>', unsafe_allow_html=True)
@@ -121,30 +120,39 @@ if st.button("🎬 IGNITE VIDEO RENDER"):
     else:
         with st.spinner("⏳ Compiling cinematic arrays... (Free servers take 1-3 minutes to render. Hang tight!)"):
             try:
-                # Initialize Serverless Client Routing
-                client = InferenceClient(api_key=HF_TOKEN)
+                # Set up standard HTTP endpoint routing to completely avoid the 400 Client error
+                API_URL = f"https://api-inference.huggingface.co/models/{model_choice}"
+                headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+                payload = {"inputs": user_prompt}
                 
-                # Fetch generated video bytes from open source inference provider
-                video_bytes = client.text_to_video(
-                    prompt=user_prompt,
-                    model=model_choice
-                )
+                # Request generation
+                response = requests.post(API_URL, headers=headers, json=payload)
                 
-                # Render to Interface layout
-                st.success("✨ Cinematic rendering completed successfully!")
+                # Check if the model is sleeping (503 Error). If so, wait for it to heat up.
+                if response.status_code == 503:
+                    st.info("🔄 Server is booting up from sleep mode. Retrying connection in 15 seconds...")
+                    time.sleep(15)
+                    response = requests.post(API_URL, headers=headers, json=payload)
                 
-                # Display the video player directly in the app
-                st.video(video_bytes)
-                
-                # Provide an instant download button
-                st.download_button(
-                    label="💾 DOWNLOAD MP4 BLUEPRINT",
-                    data=video_bytes,
-                    file_name="johnny_tec_cinematic.mp4",
-                    mime="video/mp4"
-                )
-                
+                if response.status_code == 200:
+                    video_bytes = response.content
+                    
+                    st.success("✨ Cinematic rendering completed successfully!")
+                    
+                    # Display video player layout
+                    st.video(video_bytes)
+                    
+                    # Provide immediate download button
+                    st.download_button(
+                        label="💾 DOWNLOAD MP4 BLUEPRINT",
+                        data=video_bytes,
+                        file_name="johnny_tec_cinematic.mp4",
+                        mime="video/mp4"
+                    )
+                else:
+                    st.error(f"Render engine returned status code: {response.status_code}")
+                    st.text(response.text)
+                    
             except Exception as rendering_anomaly:
                 st.error(f"Render engine anomaly detected: {rendering_anomaly}")
-                st.info("⚠️ Free video servers are often asleep or busy. If you see a '503' error, it means the server is booting up. Wait 30 seconds and click Ignite again!")
-                
+                st.info("⚠️ Free video servers are often busy. If it fails, wait 30 seconds and click Ignite again!")
