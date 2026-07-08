@@ -58,10 +58,10 @@ st.markdown(
         font-family: 'JetBrains Mono', monospace !important;
     }}
     
-    /* Custom button aesthetics */
+    /* Custom button aesthetics - Enhanced for High Contrast Readability */
     div.stButton > button:first-child {{
         background: linear-gradient(90deg, #00F0FF 0%, #22C55E 100%) !important;
-        color: #020408 !important;
+        color: #020408 !important; /* Dark text for sharp readability */
         font-family: 'Orbitron', sans-serif !important;
         font-weight: 700 !important;
         letter-spacing: 2px !important;
@@ -79,7 +79,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Pull Free Hugging Face Token (Reusing the one you made for the image generator!)
+# Pull Free Hugging Face Token 
 HF_TOKEN = st.secrets.get("HF_TOKEN", os.environ.get("HF_TOKEN", ""))
 
 # ---------------------------------------------------------------------------
@@ -90,8 +90,8 @@ with st.sidebar:
     model_choice = st.selectbox(
         "Select Generative Core",
         [
-            "ali-vilab/modelscope-damo-text-to-video",  # Most reliable free video model
-            "cerspense/zeroscope_v2_576w"               # Alternative free model
+            "damo-vilab/text-to-video-ms-1.7b",  # Active ModelScope repository
+            "cerspense/zeroscope_v2_576w"        # Active Zeroscope repository
         ]
     )
     st.divider()
@@ -107,7 +107,7 @@ if not HF_TOKEN:
     st.error("Execution Interrupted: `HF_TOKEN` secret configuration is missing in Streamlit.")
     st.stop()
 
-# Islamic Video Example Prompt
+# Scene Instructions
 st.markdown("### 🕌 Scene Instructions")
 user_prompt = st.text_area(
     "Describe the video you want to generate:",
@@ -119,7 +119,7 @@ if st.button("🎬 IGNITE VIDEO RENDER"):
     if not user_prompt.strip():
         st.warning("⚠️ Prompt buffer empty. Please provide descriptive instructions.")
     else:
-        with st.spinner("⏳ Rendering video frames... (This takes heavy processing power, please wait 1-3 minutes)"):
+        with st.spinner("⏳ Compiling cinematic arrays... (Free servers take 1-3 minutes to render. Hang tight!)"):
             try:
                 # Initialize Serverless Client Routing
                 client = InferenceClient(api_key=HF_TOKEN)
@@ -140,10 +140,11 @@ if st.button("🎬 IGNITE VIDEO RENDER"):
                 st.download_button(
                     label="💾 DOWNLOAD MP4 BLUEPRINT",
                     data=video_bytes,
-                    file_name="johnny_tec_islamic_video.mp4",
+                    file_name="johnny_tec_cinematic.mp4",
                     mime="video/mp4"
                 )
                 
             except Exception as rendering_anomaly:
                 st.error(f"Render engine anomaly detected: {rendering_anomaly}")
                 st.info("⚠️ Free video servers are often asleep or busy. If you see a '503' error, it means the server is booting up. Wait 30 seconds and click Ignite again!")
+                
