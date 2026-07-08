@@ -1,20 +1,18 @@
 """
-pages/1_🎨_Image_Generator.py
+pages/2_🎬_Video_Generator.py
 ============================================================
-JOHNNY TEC PROGRAMMING LAB - VISUAL IMAGING MATRIX
-Runs completely free using Hugging Face Serverless Inference
+JOHNNY TEC PROGRAMMING LAB - VIDEO MATRIX
+Generates short video clips using Hugging Face Free Inference
 """
 
 import streamlit as st
 import os
 from huggingface_hub import InferenceClient
-from io import BytesIO
-from PIL import Image
 
 # ---------------------------------------------------------------------------
 # 1. PAGE CONFIG & MATRIX STYLING
 # ---------------------------------------------------------------------------
-st.set_page_config(page_title="Visual Imaging Matrix", page_icon="🎨", layout="wide")
+st.set_page_config(page_title="Video Render Matrix", page_icon="🎬", layout="wide")
 
 INK = "#020408"
 SURFACE = "#070C16"
@@ -28,11 +26,12 @@ st.markdown(
     f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@500&display=swap');
+    
     .stApp {{ background: {INK}; }}
     h1, h2, h3 {{ font-family: 'Orbitron', sans-serif !important; color: {TEXT} !important; }}
     
-    .imaging-title {{
-        background: linear-gradient(90deg, {CYAN} 0%, {HOT_PINK} 100%);
+    .video-title {{
+        background: linear-gradient(90deg, {CYAN} 0%, {MATRIX} 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-size: 2.5rem !important;
@@ -49,77 +48,103 @@ st.markdown(
         background: {SURFACE} !important;
         border-right: 1px solid rgba(0, 240, 255, 0.2) !important;
     }}
+    
+    /* Glowing Text Area */
+    div[data-testid="stTextArea"] textarea {{
+        background-color: {SURFACE} !important;
+        color: {TEXT} !important;
+        border: 1px solid rgba(0, 240, 255, 0.4) !important;
+        border-radius: 8px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }}
+    
+    /* Custom button aesthetics - Enhanced for High Contrast Readability */
+    div.stButton > button:first-child {{
+        background: linear-gradient(90deg, #00F0FF 0%, #22C55E 100%) !important;
+        color: #020408 !important; /* Dark text for sharp readability */
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 700 !important;
+        letter-spacing: 2px !important;
+        border: none !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4) !important;
+        transition: all 0.3s ease !important;
+    }}
+    div.stButton > button:first-child:hover {{
+        box-shadow: 0 0 25px rgba(0, 240, 255, 0.6) !important;
+        transform: translateY(-1px);
+    }}
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Authenticate with Hugging Face Serverless Core
+# Pull Free Hugging Face Token 
 HF_TOKEN = st.secrets.get("HF_TOKEN", os.environ.get("HF_TOKEN", ""))
 
 # ---------------------------------------------------------------------------
-# 2. SIDEBAR RENDERING CONTROLS (FREE TIER ENDPOINTS)
+# 2. SIDEBAR RENDERING CONTROLS (FREE TIER VIDEO ENDPOINTS)
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("### 🧬 Imaging Models")
+    st.markdown("### 🎬 Video Cores")
     model_choice = st.selectbox(
         "Select Generative Core",
         [
-            "black-forest-labs/FLUX.1-schnell",       # 100% Free Community Tier
-            "stabilityai/stable-diffusion-2-1"        # 100% Free Community Tier
+            "damo-vilab/text-to-video-ms-1.7b",  # Active ModelScope repository
+            "cerspense/zeroscope_v2_576w"        # Active Zeroscope repository
         ]
     )
     st.divider()
-    st.markdown("💡 *Tip: FLUX.1-schnell runs on the free open community pipeline, bypassing the 402 payment router restrictions.*")
+    st.markdown("💡 *Note: Video rendering requires massive computational power. Generating on a 100% free server may take 1-3 minutes. If it fails, wait 30 seconds and try again.*")
 
 # ---------------------------------------------------------------------------
-# 3. INTERFACE HEADERS & IMAGING RUNTIME
+# 3. INTERFACE HEADERS & VIDEO RUNTIME
 # ---------------------------------------------------------------------------
-st.markdown('<div class="imaging-title">VISUAL IMAGING MATRIX</div>', unsafe_allow_html=True)
-st.markdown('<div class="status-ticker">● QUANTUM RENDER PIPELINE // FREE OPEN-SOURCE HUB ACTIVE</div>', unsafe_allow_html=True)
+st.markdown('<div class="video-title">CINEMATIC VIDEO MATRIX</div>', unsafe_allow_html=True)
+st.markdown('<div class="status-ticker">● VIDEO RENDERING PIPELINE // FREE OPEN-SOURCE HUB ACTIVE</div>', unsafe_allow_html=True)
 
 if not HF_TOKEN:
     st.error("Execution Interrupted: `HF_TOKEN` secret configuration is missing in Streamlit.")
     st.stop()
 
-# Prompt Entry Interface
+# Scene Instructions
+st.markdown("### 🕌 Scene Instructions")
 user_prompt = st.text_area(
-    "Inject Visual Prompt Instructions...",
-    placeholder="Example: A futuristic gaming setup with neon cyan and hot pink lighting, cybernetic monitors showing terminal code, hyper-realistic, 8k resolution..."
+    "Describe the video you want to generate:",
+    value="A cinematic 3D animation of a glowing Ramadan lantern sitting on a prayer mat inside a beautiful mosque, dust particles floating in the warm light, hyper-realistic, 4k resolution.",
+    height=120
 )
 
-if st.button("🚀 IGNITE QUANTUM RENDER"):
+if st.button("🎬 IGNITE VIDEO RENDER"):
     if not user_prompt.strip():
-        st.warning("Prompt buffer empty. Please provide descriptive instructions before starting deployment.")
+        st.warning("⚠️ Prompt buffer empty. Please provide descriptive instructions.")
     else:
-        with st.spinner("Compiling multi-dimensional data arrays... (This may take a moment on first model initialization)"):
+        with st.spinner("⏳ Compiling cinematic arrays... (Free servers take 1-3 minutes to render. Hang tight!)"):
             try:
                 # Initialize Serverless Client Routing
                 client = InferenceClient(api_key=HF_TOKEN)
                 
-                # Fetch generated image from open source inference provider
-                generated_raw_image = client.text_to_image(
+                # Fetch generated video bytes from open source inference provider
+                video_bytes = client.text_to_video(
                     prompt=user_prompt,
                     model=model_choice
                 )
                 
                 # Render to Interface layout
-                st.success("Visual manifestation completed successfully!")
-                st.image(generated_raw_image, caption=f"Manifestation Pipeline: {model_choice}", use_column_width=True)
+                st.success("✨ Cinematic rendering completed successfully!")
                 
-                # Provide an instant download array pipeline
-                buffer = BytesIO()
-                generated_raw_image.save(buffer, format="PNG")
-                byte_data = buffer.getvalue()
+                # Display the video player directly in the app
+                st.video(video_bytes)
                 
+                # Provide an instant download button
                 st.download_button(
-                    label="💾 EXTRACT BLUEPRINT (DOWNLOAD PNG)",
-                    data=byte_data,
-                    file_name="johnny_tec_manifestation.png",
-                    mime="image/png"
+                    label="💾 DOWNLOAD MP4 BLUEPRINT",
+                    data=video_bytes,
+                    file_name="johnny_tec_cinematic.mp4",
+                    mime="video/mp4"
                 )
                 
             except Exception as rendering_anomaly:
                 st.error(f"Render engine anomaly detected: {rendering_anomaly}")
-                st.info("Note: Free models sometimes fall asleep. If it mentions a 503 error, wait 10 seconds and try again while the engine warms up!")
+                st.info("⚠️ Free video servers are often asleep or busy. If you see a '503' error, it means the server is booting up. Wait 30 seconds and click Ignite again!")
                 
