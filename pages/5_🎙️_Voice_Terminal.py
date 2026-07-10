@@ -69,17 +69,16 @@ with col_hud:
     """, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    # Interactive language toggle tracker for your AI profile alignment
     st.radio("Core Target Language Pipeline:", ["English (Universal)", "Krio (Regional Sync)"], index=0, horizontal=True)
 
 with col_viz:
-    # --- JARVIS GLOWING ORB INTERFACE (HTML5/JS EMULATION) ---
+    # --- JARVIS GLOWING ORB INTERFACE (CORRECTED STATE MATRIX) ---
     jarvis_orb_html = """
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #070a13; border: 2px solid #00f0ff; border-radius: 12px; padding: 25px; box-shadow: 0 0 25px rgba(0,240,255,0.15);">
         <canvas id="jarvisCanvas" width="320" height="320" style="cursor: pointer;"></canvas>
         <div id="statusText" style="color: #00f0ff; font-family: monospace; font-size: 1.1rem; margin-top: 15px; text-shadow: 0 0 8px #00f0ff;">🔴 SYSTEM ASLEEP - TAP ORB TO WAKE</div>
         
-        <div style="width: 100%; max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid #bd00ff; border-radius: 6px; margin-top: 15px; padding: 10px; box-family: monospace;">
+        <div style="width: 100%; max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid #bd00ff; border-radius: 6px; margin-top: 15px; padding: 10px;">
             <p style="color: #718096; margin: 0; font-size: 0.8rem; font-family: monospace;">[TRANSCRIPT RADAR]</p>
             <p id="transcriptBox" style="color: #00ff66; margin: 5px 0 0 0; font-family: monospace; font-size: 0.95rem; font-style: italic;">...</p>
         </div>
@@ -91,11 +90,12 @@ with col_viz:
         const statusText = document.getElementById('statusText');
         const transcriptBox = document.getElementById('transcriptBox');
         
+        // Custom State Engine (Fixes Mobile Synthesis Lag)
         let isListening = false;
+        let isSpeaking = false; 
         let pulsePhase = 0;
         let micAmplitude = 0;
 
-        // Web Speech Framework APIs
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         
@@ -123,17 +123,16 @@ with col_viz:
             };
 
             recognition.onend = () => {
-                if(isListening) { recognition.start(); } // Keep looping for hands-free workflow
+                if(isListening && !isSpeaking) { recognition.start(); }
             };
         } else {
             statusText.innerText = "❌ ERROR: Browser speech node unavailable.";
         }
 
-        // JARVIS Neural Speech Engine Emulation Pipeline
         function processJarvisResponse(query) {
             statusText.innerHTML = "🤖 THINKING...";
             statusText.style.color = "#FFD700";
-            micAmplitude = 15; // Power spike inside core during analytical computations
+            micAmplitude = 15;
             
             let responseText = "I am tracking your parameters, Invincible 911. System configurations look clear.";
             
@@ -152,18 +151,25 @@ with col_viz:
             setTimeout(() => {
                 statusText.innerHTML = "🔊 SPEAKING...";
                 statusText.style.color = "#bd00ff";
+                isSpeaking = true; 
                 
-                // Speak response back out loud natively
                 const utterance = new SpeechSynthesisUtterance(responseText);
+                
                 utterance.onend = () => { 
+                    isSpeaking = false; 
                     statusText.innerHTML = "🟢 JARVIS IS LISTENING...";
                     statusText.style.color = "#00ff66";
                     micAmplitude = 0;
+                    if (isListening && recognition) { try { recognition.start(); } catch(e){} }
                 };
                 
-                // Audio visualization waves bound to speech cadence
+                utterance.onerror = () => {
+                    isSpeaking = false;
+                    resetOrb();
+                };
+                
                 let speakPulse = setInterval(() => {
-                    if(window.speechSynthesis.speaking) {
+                    if(isSpeaking) {
                         micAmplitude = Math.random() * 22 + 8;
                     } else {
                         clearInterval(speakPulse);
@@ -176,23 +182,21 @@ with col_viz:
 
         function resetOrb() {
             isListening = false;
+            isSpeaking = false;
             statusText.innerHTML = "🔴 SYSTEM ASLEEP - TAP ORB TO WAKE";
             statusText.style.color = "#00f0ff";
             micAmplitude = 0;
+            window.speechSynthesis.cancel();
         }
 
         canvas.addEventListener('click', () => {
             if (!isListening) {
                 if(recognition) recognition.start();
             } else {
-                isListening = false;
-                if(recognition) recognition.stop();
-                window.speechSynthesis.cancel();
                 resetOrb();
             }
         });
 
-        // Glowing Core Canvas Animation Loop
         function drawOrb() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const centerX = canvas.width / 2;
@@ -201,26 +205,25 @@ with col_viz:
             pulsePhase += isListening ? 0.08 : 0.02;
             let dynamicRadius = 75 + Math.sin(pulsePhase) * 6 + micAmplitude;
 
-            // Outer Arc Ring
+            // Outer Tech Ring
             ctx.beginPath();
             ctx.arc(centerX, centerY, dynamicRadius + 20, 0, 2 * Math.PI);
-            ctx.strokeStyle = isListening ? 'rgba(0, 255, 102, 0.2)' : 'rgba(0, 240, 255, 0.2)';
+            ctx.strokeStyle = isSpeaking ? 'rgba(189, 0, 255, 0.2)' : (isListening ? 'rgba(0, 255, 102, 0.2)' : 'rgba(0, 240, 255, 0.2)');
             ctx.lineWidth = 4;
             ctx.setLineDash([15, 10]);
             ctx.stroke();
 
-            // Intermediary Tech Ring
+            // Intermediary Glow Ring
             ctx.beginPath();
             ctx.arc(centerX, centerY, dynamicRadius, 0, 2 * Math.PI);
-            ctx.strokeStyle = isListening ? '#00ff66' : '#00f0ff';
-            if(window.speechSynthesis.speaking) ctx.strokeStyle = '#bd00ff';
+            ctx.strokeStyle = isSpeaking ? '#bd00ff' : (isListening ? '#00ff66' : '#00f0ff');
             ctx.lineWidth = 2;
             ctx.setLineDash([]);
             ctx.stroke();
 
-            // Deep Glowing Fusion Core
+            // Fusion Core Color Core Switching
             let gradient = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, dynamicRadius - 10);
-            if (window.speechSynthesis.speaking) {
+            if (isSpeaking) {
                 gradient.addColorStop(0, '#ffffff');
                 gradient.addColorStop(0.3, '#bd00ff');
                 gradient.addColorStop(1, 'rgba(7, 10, 19, 0)');
@@ -244,8 +247,6 @@ with col_viz:
         drawOrb();
     </script>
     """
-    # Embedded execution matrix
     st.components.v1.html(jarvis_orb_html, height=520)
 
-st.markdown("<hr style='border-color: #00f0ff;'><p style='text-align: center; color: #4A5568;'>JOHNNY TEC VOICE INFRASTRUCTURE v2.6 // VOICE DETECTION SYNC CALIBRATED</p>", unsafe_allow_html=True)
-  
+st.markdown("<hr style='border-color: #00f0ff;'><p style='text-align: center; color: #4A5568;'>JOHNNY TEC VOICE INFRASTRUCTURE v2.6 // STATE CALIBRATION COMPLETE</p>", unsafe_allow_html=True)
