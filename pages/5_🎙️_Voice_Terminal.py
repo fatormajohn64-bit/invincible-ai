@@ -119,7 +119,7 @@ st.markdown("""
     .tag-sana { background: rgba(189, 0, 255, 0.2); color: #bd00ff; }
     .tag-sys { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
     
-    /* Hide Default Streamlit Elements for cleaner UI */
+    /* Hide Default Streamlit Elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -213,7 +213,7 @@ if "transcription" in query_params and query_params["transcription"]:
         st.session_state.log.append({"sender": "SAnA", "text": sana_resp, "time": time.strftime("%H:%M:%S")})
         # Set dynamic audio flag
         st.session_state["sana_speech_queue"] = sana_resp
-    # Clear query parameters via native manipulation safely
+    # Clear query parameters safely
     st.query_params.clear()
 
 # Auto-Trigger Welcome Matrix if clean start
@@ -234,7 +234,7 @@ st.markdown("""
 """, unsafe_with_html=True)
 
 # Metric HUD Banner
-st.markdown(f"""
+st.markdown("""
 <div class="hud-container">
     <div class="hud-card">
         <div class="hud-label">COGNITIVE SYNC STATUS</div>
@@ -266,8 +266,8 @@ with col1:
         del st.session_state["sana_speech_queue"] # Consume packet instantly
 
     # --- ADVANCED GLOWING CANVAS ORB & AUDIO TRANSLATION JAVASCRIPT ---
-    # Implements strict anti-sleep loop patterns, audio speech generation, and interactive visual mechanics
-    html_component_code = f"""
+    # Using clean standard string rendering to guarantee Python interpreter compatibility
+    html_component_raw = """
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: transparent;">
         <canvas id="orbCanvas" width="340" height="340" style="cursor: pointer; filter: drop-shadow(0px 0px 15px rgba(0,240,255,0.15));"></canvas>
         <div id="statusLabel" style="margin-top: 15px; font-family: 'Orbitron', sans-serif; font-size: 1rem; letter-spacing: 3px; color: #00f0ff; text-shadow: 0 0 10px rgba(0,240,255,0.5); text-transform: uppercase;">INITIALIZING...</div>
@@ -281,7 +281,7 @@ with col1:
         const STATE_SPEAKING = 'SPEAKING';
         
         let currentState = STATE_ASLEEP;
-        let systemActive = true; // Auto-wake sequence initialization
+        let systemActive = true; 
         let rotationAngle = 0;
         let wavePhase = 0;
         let pulseRadius = 85;
@@ -293,23 +293,23 @@ with col1:
         // Native Speech Synthesizer & Speech Recognition Modules
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
-        if(SpeechRecognition) {{
+        if(SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
-        }}
+        }
         
         // Master Configs & Color Palettes
-        const config = {{
-            [STATE_ASLEEP]:   {{ coreColor: '#00f0ff', glowColor: 'rgba(0, 240, 255, 0.4)', speed: 0.01, text: "STANDBY // SLEEPING" }},
-            [STATE_LISTENING]:{{ coreColor: '#00ff66', glowColor: 'rgba(0, 255, 102, 0.5)', speed: 0.03, text: "SAnA IS LISTENING TO YOU" }},
-            [STATE_THINKING]: {{ coreColor: '#ffaa00', glowColor: 'rgba(255, 170, 0, 0.5)', speed: 0.06, text: "THINKING SECURELY..." }},
-            [STATE_SPEAKING]: {{ coreColor: '#bd00ff', glowColor: 'rgba(189, 0, 255, 0.6)', speed: 0.02, text: "SAnA IS SPEAKING TO YOU" }}
-        }};
+        const config = {
+            [STATE_ASLEEP]:   { coreColor: '#00f0ff', glowColor: 'rgba(0, 240, 255, 0.4)', speed: 0.01, text: "STANDBY // SLEEPING" },
+            [STATE_LISTENING]:{ coreColor: '#00ff66', glowColor: 'rgba(0, 255, 102, 0.5)', speed: 0.03, text: "SAnA IS LISTENING TO YOU" },
+            [STATE_THINKING]: { coreColor: '#ffaa00', glowColor: 'rgba(255, 170, 0, 0.5)', speed: 0.06, text: "THINKING SECURELY..." },
+            [STATE_SPEAKING]: { coreColor: '#bd00ff', glowColor: 'rgba(189, 0, 255, 0.6)', speed: 0.02, text: "SAnA IS SPEAKING TO YOU" }
+        };
 
         // Master UI Draw Loop (Running at ~60fps Canvas Loop)
-        function drawOrb() {{
+        function drawOrb() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
@@ -319,13 +319,13 @@ with col1:
             wavePhase += 0.15;
             
             // Dynamic Core Wave Modulation during speech
-            if (currentState === STATE_SPEAKING) {{
+            if (currentState === STATE_SPEAKING) {
                 pulseRadius = 80 + Math.sin(wavePhase) * 12;
-            }} else if (currentState === STATE_LISTENING) {{
+            } else if (currentState === STATE_LISTENING) {
                 pulseRadius = 82 + Math.sin(wavePhase * 0.5) * 4;
-            }} else {{
+            } else {
                 pulseRadius = 85;
-            }}
+            }
             
             // Layer 1: Heavy Radial Outer Core Glow
             let gradientGlow = ctx.createRadialGradient(cx, cy, pulseRadius * 0.4, cx, cy, pulseRadius * 1.6);
@@ -347,7 +347,7 @@ with col1:
             ctx.shadowBlur = 20;
             ctx.shadowColor = currentCfg.coreColor;
             ctx.stroke();
-            ctx.shadowBlur = 0; // Reset shadow for structural elements
+            ctx.shadowBlur = 0; 
             
             // Layer 3: Sharp Middle Vector Edge Ring
             ctx.beginPath();
@@ -373,117 +373,133 @@ with col1:
             statusLabel.style.color = currentCfg.coreColor;
             
             requestAnimationFrame(drawOrb);
-        }}
+        }
         
         // Microphone Capture Operations & Anti-Sleep Implementations
-        function startListening() {{
+        function startListening() {
             if (!recognition || !systemActive || currentState === STATE_SPEAKING) return;
-            try {{
+            try {
                 currentState = STATE_LISTENING;
                 recognition.start();
-            }} catch(e) {{
-                // Error catching for overlapping loops
-            }}
-        }}
+            } catch(e) {}
+        }
         
-        function stopListening() {{
-            if (recognition) {{
-                try {{ recognition.stop(); }} catch(e) {{}}
-            }}
-        }}
+        function stopListening() {
+            if (recognition) {
+                try { recognition.stop(); } catch(e) {}
+            }
+        }
 
-        if(recognition) {{
-            recognition.onresult = function(event) {{
+        if(recognition) {
+            recognition.onresult = function(event) {
                 let transcript = event.results[event.results.length - 1][0].transcript.trim();
-                if(transcript.length > 1) {{
+                if(transcript.length > 1) {
                     currentState = STATE_THINKING;
-                    // Transfer variables seamlessly through Streamlit query metrics
                     const url = new URL(window.parent.location.href);
                     url.searchParams.set("transcription", transcript);
                     window.parent.location.href = url.href;
-                }}
-            }};
+                }
+            };
             
             // ANTI-SLEEP MAX RESPONSIVENESS CAPTURE FORCED LOOP
-            recognition.onend = function() {{
-                if (systemActive && currentState !== STATE_SPEAKING && currentState !== STATE_THINKING) {{
-                    startListening(); // Instant force reboot lock
-                }}
-            }};
+            recognition.onend = function() {
+                if (systemActive && currentState !== STATE_SPEAKING && currentState !== STATE_THINKING) {
+                    startListening(); 
+                }
+            };
             
-            recognition.onerror = function() {{
-                if (systemActive && currentState !== STATE_SPEAKING) {{
-                    setTimeout(startListening, 300); // Resilience delay buffer
-                }}
-            }};
-        }}
+            recognition.onerror = function() {
+                if (systemActive && currentState !== STATE_SPEAKING) {
+                    setTimeout(startListening, 300); 
+                }
+            };
+        }
 
-        // Dynamic Native Speech Synthesis Engine (SpeechSynthesisUtterance)
-        function speakText(textToSay) {{
+        // Dynamic Native Speech Synthesis Engine
+        function speakText(textToSay) {
             if(!textToSay) return;
             systemActive = false; 
-            stopListening(); // FIXED ROUTING: Complete mute protection from echo loops
+            stopListening(); // FIXED ROUTING: Echo-loop protection
             
             currentState = STATE_SPEAKING;
             
-            // Fallback timeout protection if voice array hangs
-            let safetyTimeout = setTimeout(() => {{
-                if(currentState === STATE_SPEAKING) {{
+            let safetyTimeout = setTimeout(() => {
+                if(currentState === STATE_SPEAKING) {
                     wrapUpSpeech();
-                }}
-            }}, 12000);
+                }
+            }, 15000);
 
             let utterance = new SpeechSynthesisUtterance(textToSay);
             
-            // Select natural human-mode voicing profile if present natively
             let voices = window.speechSynthesis.getVoices();
             let chosenVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Female") || v.lang.startsWith("en"));
             if(chosenVoice) utterance.voice = chosenVoice;
             
-            utterance.rate = 1.05; // Slightly accelerated human metric
-            utterance.pitch = 1.1; // Gentle loving pitch metrics
+            utterance.rate = 1.05; 
+            utterance.pitch = 1.1; 
             
-            utterance.onend = function() {{
+            utterance.onend = function() {
                 clearTimeout(safetyTimeout);
                 wrapUpSpeech();
-            }};
+            };
             
-            utterance.onerror = function() {{
+            utterance.onerror = function() {
                 clearTimeout(safetyTimeout);
                 wrapUpSpeech();
-            }};
+            };
             
             window.speechSynthesis.speak(utterance);
-        }}
+        }
         
-        function wrapUpSpeech() {{
+        function wrapUpSpeech() {
             currentState = STATE_ASLEEP;
             systemActive = true;
-            setTimeout(() => {{
+            setTimeout(() => {
                 if(systemActive) startListening();
-            }}, 600);
-        }}
+            }, 600);
+        }
 
         // Handle Manual Interaction Toggle via Central Orb Clicks
-        canvas.addEventListener('click', () => {{
-            if(systemActive) {{
-                // Turn completely offline
+        canvas.addEventListener('click', () => {
+            if(systemActive) {
                 systemActive = false;
                 currentState = STATE_ASLEEP;
                 stopListening();
                 window.speechSynthesis.cancel();
-            }} else {{
-                // Wake up completely
+            } else {
                 systemActive = true;
                 currentState = STATE_ASLEEP;
                 startListening();
-            }}
-        }});
+            }
+        });
 
-        // Trigger Speech Delivery dynamically from parent python runtime payload injections
-        let initialSpeechPayload = `{speech_payload}`;
+        let initialSpeechPayload = `__SPEECH_PAYLOAD_PLACEHOLDER__`;
         
         // Initialization Core
-        window.onload = function() {{
-            // Ensure voices are buffered natively in browser structures
-   
+        window.onload = function() {
+            window.speechSynthesis.getVoices();
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = () => {
+                    if(initialSpeechPayload && currentState === STATE_ASLEEP) {
+                        speakText(initialSpeechPayload);
+                        initialSpeechPayload = "";
+                    }
+                };
+            }
+            
+            drawOrb();
+            
+            setTimeout(() => {
+                if(initialSpeechPayload) {
+                    speakText(initialSpeechPayload);
+                    initialSpeechPayload = "";
+                } else {
+                    startListening();
+                }
+            }, 800);
+        };
+    </script>
+    """
+    
+    # Safely swap out text data without utilizing Python f-string compiling mechanisms
+    html_component_code 
