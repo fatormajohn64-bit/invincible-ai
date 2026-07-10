@@ -1,19 +1,19 @@
 """
-JOHNNY TEC / INVINCIBLE 911 — JARVIS VOICE OPERATING SYSTEM
+JOHNNY TEC — ADVANCED VOICE OPERATING SYSTEM
 ===========================================================
 Features: Real-time Web Speech Core, Neon Audio Visualizer Orb,
-Dual Language Matrix (English/Krio Tracking), and Telemetry HUD.
+Anti-Echo Chamber Tech, and Dynamic Identity Recognition.
 """
 
 import streamlit as st
 
 # --- PAGE ARCHITECTURE ---
-st.set_page_config(page_title="JARVIS Voice Core", page_icon="🎙️", layout="wide")
+st.set_page_config(page_title="JOHNNY TEC Voice Core", page_icon="🎙️", layout="wide")
 
-# Cyberpunk JARVIS UI Styles
+# Cyberpunk UI Styles
 st.markdown("""
     <style>
-    .jarvis-title {
+    .ai-title {
         text-align: center;
         font-family: 'Courier New', Courier, monospace;
         color: #00f0ff;
@@ -44,8 +44,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='jarvis-title'>◢ INVINCIBLE VOICE TERMINAL ◣</h1>", unsafe_allow_html=True)
-st.markdown("<div class='sub-status'>⚡ AI COGNITIVE AUDIO MATRIX ACTIVE // PROTOCOL 911</div>", unsafe_allow_html=True)
+st.markdown("<h1 class='ai-title'>◢ JOHNNY TEC VOICE TERMINAL ◣</h1>", unsafe_allow_html=True)
+st.markdown("<div class='sub-status'>⚡ COGNITIVE AUDIO MATRIX ACTIVE // PROTOCOL 911</div>", unsafe_allow_html=True)
 
 # Layout: Visualizer on Left, System Diagnostics on Right
 col_viz, col_hud = st.columns([6, 4])
@@ -54,14 +54,14 @@ with col_hud:
     st.markdown("### 🖥️ Core Matrix Metrics")
     st.markdown("""
     <div class='hud-card'>
-        <span style='color: #00f0ff;'>[SYSTEM]</span> Status: <span style='color: #00ff66;'>ONLINE</span><br>
+        <span style='color: #00f0ff;'>[SYSTEM]</span> Identity: <span style='color: #00ff66;'>JOHNNY TEC</span><br>
         <span style='color: #00f0ff;'>[ENGINE]</span> Neural Model: <span style='color: #FFD700;'>llama-3.1-8b-instant</span><br>
-        <span style='color: #00f0ff;'>[AUDIO]</span> Input Node: <span style='color: #E2E8F0;'>Browser Native WebRTC</span><br>
+        <span style='color: #00f0ff;'>[AUDIO]</span> Feedback Loop: <span style='color: #ff0055;'>ANTI-ECHO ENGAGED</span><br>
         <span style='color: #00f0ff;'>[LATENCY]</span> Voice Sync: <span style='color: #00ff66;'>0.02ms (Direct-Link)</span>
         <hr style='border-color: #bd00ff;'>
-        <span style='color: #bd00ff;'>🧠 SYSTEM INSIGHT (KRIO & ENG SYNC):</span><br>
+        <span style='color: #bd00ff;'>🧠 SYSTEM INSIGHT:</span><br>
         <p class='matrix-text'>
-        > Listening engine dynamically balanced.<br>
+        > Anti-echo protocol prevents infinite talking loops.<br>
         > Tap the central power core to boot voice recognition.<br>
         > Say "Clear" to reset the telemetry console buffer.
         </p>
@@ -72,10 +72,10 @@ with col_hud:
     st.radio("Core Target Language Pipeline:", ["English (Universal)", "Krio (Regional Sync)"], index=0, horizontal=True)
 
 with col_viz:
-    # --- JARVIS GLOWING ORB INTERFACE (CORRECTED STATE MATRIX) ---
-    jarvis_orb_html = """
+    # --- JOHNNY TEC GLOWING ORB INTERFACE (UPGRADED LOGIC) ---
+    johnny_orb_html = """
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #070a13; border: 2px solid #00f0ff; border-radius: 12px; padding: 25px; box-shadow: 0 0 25px rgba(0,240,255,0.15);">
-        <canvas id="jarvisCanvas" width="320" height="320" style="cursor: pointer;"></canvas>
+        <canvas id="aiCanvas" width="320" height="320" style="cursor: pointer;"></canvas>
         <div id="statusText" style="color: #00f0ff; font-family: monospace; font-size: 1.1rem; margin-top: 15px; text-shadow: 0 0 8px #00f0ff;">🔴 SYSTEM ASLEEP - TAP ORB TO WAKE</div>
         
         <div style="width: 100%; max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid #bd00ff; border-radius: 6px; margin-top: 15px; padding: 10px;">
@@ -85,16 +85,20 @@ with col_viz:
     </div>
 
     <script>
-        const canvas = document.getElementById('jarvisCanvas');
+        const canvas = document.getElementById('aiCanvas');
         const ctx = canvas.getContext('2d');
         const statusText = document.getElementById('statusText');
         const transcriptBox = document.getElementById('transcriptBox');
         
-        // Custom State Engine (Fixes Mobile Synthesis Lag)
+        // High-Level State Engine
         let isListening = false;
         let isSpeaking = false; 
         let pulsePhase = 0;
         let micAmplitude = 0;
+
+        // Dynamic Identity Array
+        const userTitles = ["John", "Abdullah", "Sir"];
+        const getRandomTitle = () => userTitles[Math.floor(Math.random() * userTitles.length)];
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
@@ -106,8 +110,9 @@ with col_viz:
             recognition.lang = 'en-US';
 
             recognition.onstart = () => {
+                if(isSpeaking) { recognition.abort(); return; } // Anti-Echo Shield
                 isListening = true;
-                statusText.innerHTML = "🟢 JARVIS IS LISTENING...";
+                statusText.innerHTML = "🟢 JOHNNY TEC IS LISTENING...";
                 statusText.style.color = "#00ff66";
                 statusText.style.textShadow = "0 0 10px #00ff66";
             };
@@ -115,41 +120,56 @@ with col_viz:
             recognition.onresult = (event) => {
                 const speechResult = event.results[0][0].transcript;
                 transcriptBox.innerText = "You: " + speechResult;
-                processJarvisResponse(speechResult);
+                processVoiceCommand(speechResult);
             };
 
-            recognition.onerror = () => {
-                resetOrb();
+            recognition.onerror = (event) => {
+                if (event.error !== 'aborted') resetOrb();
             };
 
             recognition.onend = () => {
-                if(isListening && !isSpeaking) { recognition.start(); }
+                // Auto-restart ONLY if we are not speaking to prevent loops
+                if(isListening && !isSpeaking) { 
+                    try { recognition.start(); } catch(e){} 
+                }
             };
         } else {
             statusText.innerText = "❌ ERROR: Browser speech node unavailable.";
         }
 
-        function processJarvisResponse(query) {
+        function processVoiceCommand(query) {
+            isListening = false; // Stop listening while processing
+            if(recognition) recognition.abort(); 
+
             statusText.innerHTML = "🤖 THINKING...";
             statusText.style.color = "#FFD700";
             micAmplitude = 15;
             
-            let responseText = "I am tracking your parameters, Invincible 911. System configurations look clear.";
-            
             const lowerQuery = query.toLowerCase();
-            if (lowerQuery.includes('hello') || lowerQuery.includes('jarvis')) {
-                responseText = "Hello John. Voice link established. I am completely at your service.";
+            const title = getRandomTitle();
+            let responseText = `I am tracking your parameters, ${title}. Systems are nominal.`;
+            
+            // Dynamic Response Matrix
+            if (lowerQuery.includes('hello') || lowerQuery.includes('hi')) {
+                const greetings = [
+                    `Voice link established. Good to hear you, ${title}.`,
+                    `Hello ${title}. I am JOHNNY TEC, completely at your service.`,
+                    `Systems online. What is our objective today, ${title}?`
+                ];
+                responseText = greetings[Math.floor(Math.random() * greetings.length)];
             } else if (lowerQuery.includes('weather')) {
-                responseText = "Accessing terminal grid. Freetown radar displays warm structural conditions.";
+                responseText = `Accessing grid. Freetown radar displays warm structural conditions, ${title}.`;
             } else if (lowerQuery.includes('clear')) {
                 transcriptBox.innerText = "...";
-                responseText = "Console cleared, sir.";
+                responseText = `Console cleared, ${title}. Ready for next command.`;
             } else if (lowerQuery.includes('football') || lowerQuery.includes('messi')) {
-                responseText = "Analyzing data. Lionel Messi remains the absolute peak of football intelligence matrices.";
+                responseText = `Analyzing data. Lionel Messi remains the absolute peak of football matrices, ${title}.`;
+            } else if (lowerQuery.includes('who are you') || lowerQuery.includes('your name')) {
+                responseText = `I am JOHNNY TEC, your personal artificial intelligence, designed for Invincible 911.`;
             }
 
             setTimeout(() => {
-                statusText.innerHTML = "🔊 SPEAKING...";
+                statusText.innerHTML = "🔊 JOHNNY TEC SPEAKING...";
                 statusText.style.color = "#bd00ff";
                 isSpeaking = true; 
                 
@@ -157,10 +177,14 @@ with col_viz:
                 
                 utterance.onend = () => { 
                     isSpeaking = false; 
-                    statusText.innerHTML = "🟢 JARVIS IS LISTENING...";
-                    statusText.style.color = "#00ff66";
+                    statusText.innerHTML = "🔄 RECALIBRATING MIC...";
+                    statusText.style.color = "#FFD700";
                     micAmplitude = 0;
-                    if (isListening && recognition) { try { recognition.start(); } catch(e){} }
+                    
+                    // Anti-Echo Timeout: Wait 1.5 seconds before listening again
+                    setTimeout(() => {
+                        resetOrb();
+                    }, 1500);
                 };
                 
                 utterance.onerror = () => {
@@ -177,7 +201,7 @@ with col_viz:
                 }, 70);
 
                 window.speechSynthesis.speak(utterance);
-            }, 800);
+            }, 600);
         }
 
         function resetOrb() {
@@ -187,16 +211,18 @@ with col_viz:
             statusText.style.color = "#00f0ff";
             micAmplitude = 0;
             window.speechSynthesis.cancel();
+            if(recognition) recognition.abort();
         }
 
         canvas.addEventListener('click', () => {
-            if (!isListening) {
+            if (!isListening && !isSpeaking) {
                 if(recognition) recognition.start();
             } else {
                 resetOrb();
             }
         });
 
+        // Glowing Core Canvas Animation Loop
         function drawOrb() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const centerX = canvas.width / 2;
@@ -221,7 +247,7 @@ with col_viz:
             ctx.setLineDash([]);
             ctx.stroke();
 
-            // Fusion Core Color Core Switching
+            // Fusion Core
             let gradient = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, dynamicRadius - 10);
             if (isSpeaking) {
                 gradient.addColorStop(0, '#ffffff');
@@ -247,6 +273,6 @@ with col_viz:
         drawOrb();
     </script>
     """
-    st.components.v1.html(jarvis_orb_html, height=520)
+    st.components.v1.html(johnny_orb_html, height=520)
 
-st.markdown("<hr style='border-color: #00f0ff;'><p style='text-align: center; color: #4A5568;'>JOHNNY TEC VOICE INFRASTRUCTURE v2.6 // STATE CALIBRATION COMPLETE</p>", unsafe_allow_html=True)
+st.markdown("<hr style='border-color: #00f0ff;'><p style='text-align: center; color: #4A5568;'>JOHNNY TEC VOICE INFRASTRUCTURE v3.0 // ANTI-ECHO SECURED</p>", unsafe_allow_html=True)
